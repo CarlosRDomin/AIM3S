@@ -1,17 +1,18 @@
-FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu16.04
-# 10.1-cudnn7-devel-ubuntu18.04 (10.1/devel/cudnn7/Dockerfile)
+    FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu16.04
+    # 10.1-cudnn7-devel-ubuntu18.04 (10.1/devel/cudnn7/Dockerfile)
 
-# ------------------------------------------------------------------
-# openpose
-# ------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # openpose
+    # ------------------------------------------------------------------
 
-# nvidia-container-runtime
-ENV NVIDIA_VISIBLE_DEVICES all
-ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
-ENV NVIDIA_REQUIRE_CUDA "cuda>=10.0"
-ENV DEBIAN_FRONTEND=noninteractive
+    # nvidia-container-runtime
+    ENV NVIDIA_VISIBLE_DEVICES all
+    ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
+    ENV NVIDIA_REQUIRE_CUDA "cuda>=10.0"
+    ENV DEBIAN_FRONTEND=noninteractive
+    ENV PYTHONPATH=/usr/local/python
 
-RUN apt-get update && apt-get install git -yy && \
+    RUN apt-get update && apt-get install git -yy && \
     git clone https://github.com/CMU-Perceptual-Computing-Lab/openpose.git \ 
     /software/openpose && \
     apt-get install sudo libopencv-dev cmake -yy && \
