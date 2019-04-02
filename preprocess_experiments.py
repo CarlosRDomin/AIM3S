@@ -130,24 +130,37 @@ def _crop_image(img, center, half_w, half_h):
 
 
 class ExperimentPreProcessor:
-    def __init__(self, main_folder, start_datetime=datetime.min, end_datetime=datetime.max, do_pose=True, do_weight=True, num_processes=cpu_count()):
+    def __init__(self, main_folder, start_datetime=datetime.min, end_datetime=datetime.max, do_pose=True, do_weight=True, num_processes_weight=cpu_count(), num_processes_vision=3):
         self.main_folder = main_folder
         self.start_datetime = start_datetime
         self.end_datetime = end_datetime
         self.do_pose = do_pose
         self.do_weight = do_weight
 
-        self.pool = Pool(processes=num_processes)
-        self.tasks_state = []
-        self.num_tasks_done = 0
+        self.pool_weight = Pool(processes=num_processes_weight)
+        self.pool_vision = Pool(processes=num_processes_vision)
+        self.weight_tasks_state = []
+        self.vision_tasks_state = []
+        self.num_weight_tasks_done = 0
+        self.num_vision_tasks_done = 0
 
     @staticmethod
     def _list_subfolders(folder):
         return next(os.walk(folder))[1]
 
-    def _task_done_cb(self, _):
-        self.num_tasks_done += 1
-        print("Tasks done: {}/{} ({:5.2f}%)".format(self.num_tasks_done, len(self.tasks_state), 100*self.num_tasks_done/len(self.tasks_state)))
+    def _task_done_cb(self, is_weight):
+        if is_weight:
+            self.num_weight_tasks_done += 1
+            n = self.num_weight_tasks_done
+            total = len(self.weight_tasks_state)
+            str_type = "Weight"
+        else:
+            self.num_vision_tasks_done += 1
+            n = self.num_vision_tasks_done
+            total = len(self.vision_tasks_state)
+            str_type = "Vision"
+
+        print("{} tasks done: {}/{} ({:5.2f}%)".format(str_type, n, total, 100*n/total))
 
     def run(self):
         # Traverse all subfolders inside args.folder and dispatch tasks to the pool of workers
@@ -160,39 +173,39 @@ class ExperimentPreProcessor:
 
                 # Tell the weight preprocessor to merge all weight sensors into a single h5 file
                 if args.do_weight:
-                    task_state = self.pool.apply_async(preprocess_weight, (parent_folder,), callback=self._task_done_cb)
-                    self.tasks_state.append(task_state)
+                    task_state = self.pool_weight.apply_async(preprocess_weight, (parent_folder,), callback=lambda _: self._task_done_cb(is_weight=True))
+                    self.weight_tasks_state.append(task_state)
 
                 # Tell the pose preprocessor to run pose estimation on every camera video
                 if args.do_pose:
                     for video in glob.glob(os.path.join(parent_folder, "cam*_{}.mp4".format(f))):
                         kwds = {"crop_half_w": 200, "crop_half_h": 200} if os.path.basename(video).startswith("cam4") else {}  # Top-down camera is closer -> Crop bigger window
-                        task_state = self.pool.apply_async(preprocess_vision, (video,), kwds, callback=self._task_done_cb)
-                        self.tasks_state.append(task_state)
+                        task_state = self.pool_vision.apply_async(preprocess_vision, (video,), kwds, callback=lambda _: self._task_done_cb(is_weight=False))
+                        self.vision_tasks_state.append(task_state)
 
-        print("Preprocessing tasks enqueued, waiting for them to complete!")
-        for i,task_state in enumerate(self.tasks_state):
-            task_state.wait()
-            if not task_state.successful():
-                print("Uh oh... Task {}: {}".format(i+1, task_state._value))
+        print("Preprocessing weight tasks enqueued, waiting for them to complete!")
+        for tasks_state in (self.weight_tasks_state, self.vision_tasks_state):
+            for i,task_state in enumerate(tasks_state):
+                task_state.wait()
+                if not task_state.successful():
+                    print("Uh oh... {} task {}: {}".format("Weight" if tasks_state==self.weight_tasks_state else "Vision", i+1, task_state._value))
 
         print("All done!")
 
 
 if __name__ == "__main__":
-    # preprocess_vision("Dataset/Characterization/2019-03-31_00-00-02/cam4_2019-03-31_00-00-02.mp4", crop_half_h=200, crop_half_w=200)
-
     parser = argparse.ArgumentParser()
     parser.add_argument("folder", default="Dataset/Characterization", help="Folder containing the experiment(s) to preprocess")
     parser.add_argument("-s", "--start-datetime", default="", help="Only preprocess experiments collected later than this datetime (format: {}; empty for no limit)".format(DATETIME_FORMAT))
     parser.add_argument("-e", "--end-datetime", default="", help="Only preprocess experiments collected before this datetime (format: {}; empty for no limit)".format(DATETIME_FORMAT))
     parser.add_argument('-p', "--do-pose", default=True, type=bool, help="Whether or not to pre-process human pose")
     parser.add_argument('-w', "--do-weight", default=True, type=bool, help="Whether or not to pre-process weight")
-    parser.add_argument('-n', "--num-processes", default=cpu_count(), type=int, help="Number of processes to spawn")
+    parser.add_argument('-nw', "--num-processes-weight", default=cpu_count(), type=int, help="Number of processes to spawn for weight preprocessing")
+    parser.add_argument('-nv', "--num-processes-vision", default=3, type=int, help="Number of processes to spawn for vision preprocessing")
     args = parser.parse_args()
 
     t_start = datetime.strptime(args.start_datetime, DATETIME_FORMAT) if len(args.start_datetime) > 0 else datetime.min
     t_end = datetime.strptime(args.end_datetime, DATETIME_FORMAT) if len(args.end_datetime) > 0 else datetime.max
 
-    ExperimentPreProcessor(args.folder, t_start, t_end, args.do_pose, args.do_weight, args.num_processes).run()
+    ExperimentPreProcessor(args.folder, t_start, t_end, args.do_pose, args.do_weight, args.num_processes_weight, args.num_processes_vision).run()
 
