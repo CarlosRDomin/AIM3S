@@ -1,0 +1,16 @@
+version: '3'
+services:
+  aim3s:
+    build:
+      dockerfile: docker/Dockerfile
+      context: ..
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+    volumes:
+      - ..:/app
+    ports:
+      - 3000:3000
+networks:
+  bridge:
+    driver: bridge
