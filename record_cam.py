@@ -97,7 +97,7 @@ class ProcessRecordCam:
         print("Closed camera {}, video saved as '{}'!".format(self.cam_id, self.out_filename))
 
     def _log_config(self):
-        with h5py.File(self.out_filename.rsplit('.', 1)[0] + ".h5", 'w') as f:
+        with h5py.File(os.path.splitext(self.out_filename)[0] + ".h5", 'w') as f:
             f.create_dataset("t", data=[(t-self.t_frames[0]).total_seconds() for t in self.t_frames])
             f.create_dataset("t_str", data=[str(t) for t in self.t_frames])
             config = f.create_group("config")
