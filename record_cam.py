@@ -99,7 +99,7 @@ class ProcessRecordCam:
     def _log_config(self):
         with h5py.File(os.path.splitext(self.out_filename)[0] + ".h5", 'w') as f:
             f.create_dataset("t", data=[(t-self.t_frames[0]).total_seconds() for t in self.t_frames])
-            f.create_dataset("t_str", data=[str(t) for t in self.t_frames])
+            f.create_dataset("t_str", data=[str(t).encode('utf8') for t in self.t_frames])
             config = f.create_group("config")
             config.attrs["ip"] = self.rtsp_ip
             config.attrs["channel"] = self.rtsp_ch
