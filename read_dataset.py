@@ -2,6 +2,7 @@ import os
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 
 DEPTH_RESOLUTION = (720, 1280)
@@ -56,10 +57,10 @@ def read_weight_data(sensor_folder, is_phidget=False):
 
     # Segments usually aren't read in (time-series) order -> Sort by timestamp
     t_inds = sensor_t.argsort()
-    sensor_t = sensor_t[t_inds]
+    sensor_t = [datetime.fromtimestamp(t) for t in sensor_t[t_inds]]
     sensor_data = sensor_data[t_inds,:] if is_phidget else sensor_data[t_inds]
 
-    return sensor_t, sensor_data
+    return np.array(sensor_t), np.array(sensor_data)
 
 
 def read_frame_data(frame_filename):

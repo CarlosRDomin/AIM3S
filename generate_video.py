@@ -1,4 +1,5 @@
 from read_dataset import read_weight_data
+from aux_tools import format_axis_as_timedelta
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
@@ -26,14 +27,15 @@ def generate_video(experiment_base_folder='Dataset/Characterization/2019-03-31_0
     camera_timestamps = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S.%f") for t in camera_info.get("t_str")]
 
     # Manually align weight and cam timestamps (not synced for some reason)
-    weight_to_cam_t_offset = camera_timestamps[0] - timedelta(seconds=2)  # - weight_t[0]
+    weight_to_cam_t_offset = weight_t[0] + timedelta(seconds=11)  # camera_timestamps[0]
 
     # Set up matplotlib figure
     fig = plt.figure(figsize=(4,2))
     ax = fig.subplots()
-    ax.plot(weight_t - weight_t[0], weight_data)
+    ax.plot([(t - weight_t[0]).total_seconds() for t in weight_t], weight_data)
     ax.set_title('Load cell #{}'.format(weight_id))
     ax.set_ylabel('Weight (g)')
+    format_axis_as_timedelta(ax.xaxis)
 
     # Set up video file
     video_filename = 'AIM3S_experiment.mp4'

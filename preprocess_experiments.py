@@ -1,6 +1,9 @@
 import cv2
 import numpy as np
 from openpose import pyopenpose as op
+from read_dataset import read_weight_data
+from aux_tools import str2bool, _min, _max, ensure_folder_exists, list_subfolders
+from matplotlib import pyplot as plt
 from datetime import datetime
 from multiprocessing import Pool, cpu_count
 from enum import Enum
@@ -46,31 +49,35 @@ class JointEnum(Enum):
     BACKGND = 25
 
 
-def _ensure_folder_exists(folder):
-    try:
-        os.makedirs(folder)
-    except OSError:  # Already exists -> Ignore
-        pass
-
-
 def preprocess_weight(parent_folder):
     print("Processing weights at {}".format(parent_folder))
+
+    for sensor_folder in glob.glob(os.path.join(parent_folder, "sensors_*")):
+        weight_id = int(sensor_folder.rsplit('_', 1)[1])  # Extract the numeric part after "sensors_{}"
+        weight_t, weight_data = read_weight_data(sensor_folder)
+
+        fig = plt.figure(figsize=(4, 2))
+        ax = fig.subplots()
+        ax.plot(weight_t, weight_data)
+        ax.set_title('Load cell #{}'.format(weight_id))
+        ax.set_ylabel('Weight (g)')
+        fig.show()
     time.sleep(3)
 
 
-def preprocess_vision(video_filename, wrist_thresh=0.2, crop_half_w=100, crop_half_h=100):
+def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_half_w=100, crop_half_h=100):
     print("Processing video '{}'...".format(video_filename))
     video_prefix = os.path.splitext(video_filename)[0]  # Remove extension
     pose_prefix = video_prefix + "_pose"
     cropped_img_prefix = os.path.join(os.path.dirname(video_prefix), CROPPED_IMGS_FOLDER_NAME, os.path.basename(video_prefix))
-    _ensure_folder_exists(os.path.dirname(cropped_img_prefix))  # Create folder if it didn't exist
+    ensure_folder_exists(os.path.dirname(cropped_img_prefix))  # Create folder if it didn't exist
 
     # Run Openpose to find people and their poses
     if os.path.exists(pose_prefix):
         print("Folder '{}' exists, not running Openpose!".format(pose_prefix))
     else:
         openpose_params = {
-            "model_folder": "openpose-models/",
+            "model_folder": pose_model_folder,
             "video": video_filename,
             "write_video": pose_prefix + ".mp4",
             "write_json": pose_prefix,  # Will create the folder and save a json per frame in the video
@@ -117,9 +124,6 @@ def preprocess_vision(video_filename, wrist_thresh=0.2, crop_half_w=100, crop_ha
 
 
 def _crop_image(img, center, half_w, half_h):
-    def _min(a,b): return a if a<b else b
-    def _max(a,b): return a if a>b else b
-
     center_x = int(center[1])
     center_y = int(center[0])
     x_min = _max(center_x-half_w, 0)
@@ -130,12 +134,13 @@ def _crop_image(img, center, half_w, half_h):
 
 
 class ExperimentPreProcessor:
-    def __init__(self, main_folder, start_datetime=datetime.min, end_datetime=datetime.max, do_pose=True, do_weight=True, num_processes_weight=cpu_count(), num_processes_vision=3):
+    def __init__(self, main_folder, start_datetime=datetime.min, end_datetime=datetime.max, do_weight=True, do_pose=True, pose_model_folder="openpose-models/", num_processes_weight=cpu_count(), num_processes_vision=3):
         self.main_folder = main_folder
         self.start_datetime = start_datetime
         self.end_datetime = end_datetime
-        self.do_pose = do_pose
         self.do_weight = do_weight
+        self.do_pose = do_pose
+        self.pose_model_folder = pose_model_folder
 
         self.pool_weight = Pool(processes=num_processes_weight)
         self.pool_vision = Pool(processes=num_processes_vision)
@@ -143,10 +148,6 @@ class ExperimentPreProcessor:
         self.vision_tasks_state = []
         self.num_weight_tasks_done = 0
         self.num_vision_tasks_done = 0
-
-    @staticmethod
-    def _list_subfolders(folder):
-        return next(os.walk(folder))[1]
 
     def _task_done_cb(self, is_weight):
         if is_weight:
@@ -164,7 +165,7 @@ class ExperimentPreProcessor:
 
     def run(self):
         # Traverse all subfolders inside args.folder and dispatch tasks to the pool of workers
-        for f in self._list_subfolders(self.main_folder):
+        for f in list_subfolders(self.main_folder):
             t = datetime.strptime(f, DATETIME_FORMAT)  # Folder name specifies the date -> Convert to datetime
 
             # Filter by experiment date (only consider experiments within t_start and t_end)
@@ -180,7 +181,7 @@ class ExperimentPreProcessor:
                 if args.do_pose:
                     for video in glob.glob(os.path.join(parent_folder, "cam*_{}.mp4".format(f))):
                         kwds = {"crop_half_w": 200, "crop_half_h": 200} if os.path.basename(video).startswith("cam4") else {}  # Top-down camera is closer -> Crop bigger window
-                        task_state = self.pool_vision.apply_async(preprocess_vision, (video,), kwds, callback=lambda _: self._task_done_cb(is_weight=False))
+                        task_state = self.pool_vision.apply_async(preprocess_vision, (video, self.pose_model_folder), kwds, callback=lambda _: self._task_done_cb(is_weight=False))
                         self.vision_tasks_state.append(task_state)
 
         print("Preprocessing weight tasks enqueued, waiting for them to complete!")
@@ -198,8 +199,9 @@ if __name__ == "__main__":
     parser.add_argument("folder", default="Dataset/Characterization", help="Folder containing the experiment(s) to preprocess")
     parser.add_argument("-s", "--start-datetime", default="", help="Only preprocess experiments collected later than this datetime (format: {}; empty for no limit)".format(DATETIME_FORMAT))
     parser.add_argument("-e", "--end-datetime", default="", help="Only preprocess experiments collected before this datetime (format: {}; empty for no limit)".format(DATETIME_FORMAT))
-    parser.add_argument('-p', "--do-pose", default=True, type=bool, help="Whether or not to pre-process human pose")
-    parser.add_argument('-w', "--do-weight", default=True, type=bool, help="Whether or not to pre-process weight")
+    parser.add_argument('-w', "--do-weight", default=True, type=str2bool, help="Whether or not to pre-process weight")
+    parser.add_argument('-p', "--do-pose", default=True, type=str2bool, help="Whether or not to pre-process human pose")
+    parser.add_argument('-pm', "--pose-model-folder", default="openpose-models/", help="Human pose model folder location (can be a symlink)")
     parser.add_argument('-nw', "--num-processes-weight", default=cpu_count(), type=int, help="Number of processes to spawn for weight preprocessing")
     parser.add_argument('-nv', "--num-processes-vision", default=3, type=int, help="Number of processes to spawn for vision preprocessing")
     args = parser.parse_args()
@@ -207,5 +209,5 @@ if __name__ == "__main__":
     t_start = datetime.strptime(args.start_datetime, DATETIME_FORMAT) if len(args.start_datetime) > 0 else datetime.min
     t_end = datetime.strptime(args.end_datetime, DATETIME_FORMAT) if len(args.end_datetime) > 0 else datetime.max
 
-    ExperimentPreProcessor(args.folder, t_start, t_end, args.do_pose, args.do_weight, args.num_processes_weight, args.num_processes_vision).run()
+    ExperimentPreProcessor(args.folder, t_start, t_end, args.do_weight, args.do_pose, args.pose_model_folder, args.num_processes_weight, args.num_processes_vision).run()
 
