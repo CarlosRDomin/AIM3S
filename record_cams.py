@@ -5,6 +5,7 @@ import argparse
 import os
 import h5py
 from random import random
+from aux_tools import get_nonempty_input
 
 
 class ProcessRecordCam:
@@ -21,7 +22,7 @@ class ProcessRecordCam:
         def release(self):
             pass
 
-    def __init__(self, rtsp_ip, rtsp_user="admin", rtsp_pass="", rtsp_ch="1", rtsp_stream="0", out_filename=None, out_codec="H264", out_fps=30, cam_id=1, visualize=False):
+    def __init__(self, rtsp_ip, rtsp_user="admin", rtsp_pass="", rtsp_ch="1", rtsp_stream="0", out_filename=None, out_codec="H264", out_fps=30, cam_id=1, recording_info=None, visualize=False):
         self.rtsp_ip = rtsp_ip
         self.rtsp_user = rtsp_user
         self.rtsp_pass = rtsp_pass
@@ -31,6 +32,7 @@ class ProcessRecordCam:
         self.out_codec = out_codec
         self.out_fps = out_fps
         self.cam_id = "{} ({})".format(cam_id, self.rtsp_ip)
+        self.recording_info = recording_info if recording_info is not None else {}
         self.visualize = visualize
 
         self.video_src = "rtsp://{}/user={}&password={}&channel={}&stream={}.sdp".format(rtsp_ip, rtsp_user, rtsp_pass, rtsp_ch, rtsp_stream)
@@ -106,6 +108,8 @@ class ProcessRecordCam:
             config.attrs["stream"] = self.rtsp_stream
             config.attrs["out_filename"] = self.out_filename
             config.attrs["cam_id"] = self.cam_id
+            for info_key, info_value in self.recording_info.iteritems():
+                config.attrs[info_key] = info_value
 
 
 class ProcessRecordCamHelper:
@@ -138,21 +142,41 @@ if __name__ == "__main__":
     parser.add_argument('-f', "--folder", default="Dataset/Characterization", help="Recording output folder")
     parser.add_argument('-k', "--codec", default="avc1", help="Output video codec")
     parser.add_argument('-r', "--fps", default=30, type=int, help="Output video frame rate")
+    parser.add_argument('-m', "--multiple-recordings", default=False, action="store_true", help="Append this flag to allow for multiple recordings without needing to re-run the script")
+    parser.add_argument('-v', "--visualize", default=False, action="store_true", help="Append this flag to visualize the camera(s) in an OpenCV window")
     args = parser.parse_args()
 
-    t_start = str(datetime.now())[:-7].replace(':', '-').replace(' ', '_')
-    print("Starting cam recording @ {}".format(t_start))
-    output_folder = os.path.join(args.folder, t_start)
-    os.makedirs(output_folder)  # Create parent directory
 
-    p_recordings = []
-    for i,ip in enumerate(args.ip):
-        p_recordings.append(ProcessRecordCamHelper(ip, args.user, args.passwd, args.ch, args.stream, os.path.join(output_folder, "cam{}_{}.mp4".format(i+1, t_start)), args.codec, args.fps, i+1))
 
-    try:
-        for p in p_recordings: p.wait_for_finish()
-    except (KeyboardInterrupt, SystemExit):  # Wait for user to request to stop recording
-        for p in p_recordings: p.stop_recording()
-        for p in p_recordings: p.wait_for_finish()
+    while True:
+        recording_info = {}
+        if args.multiple_recordings:
+            item_name = get_nonempty_input("Please enter the name of this item once it's placed in the center of the turntable (or enter 'QUIT' to terminate): ")
+            if item_name.lower() == "quit":
+                break
+            item_barcode = get_nonempty_input("Input the item's barcode: ")
+            item_frontback = get_nonempty_input("Is this the front (f) or the back (b)?")
+            recording_info = {"item_name": item_name, "item_barcode": item_barcode, "item_frontback": item_frontback}
+            raw_input("Ready? Press ENTER")
+
+        t_start = str(datetime.now())[:-7].replace(':', '-').replace(' ', '_')
+        print("Starting cam recording @ {}".format(t_start))
+        video_suffix = t_start if not args.multiple_recordings else '_'.join((item_name, item_barcode, item_frontback))
+        output_folder = os.path.join(args.folder, video_suffix)
+        os.makedirs(output_folder)  # Create parent directory
+
+        p_recordings = []
+        for i,ip in enumerate(args.ip):
+            p_recordings.append(ProcessRecordCamHelper(ip, args.user, args.passwd, args.ch, args.stream, os.path.join(output_folder, "cam{}_{}.mp4".format(i+1, video_suffix)), args.codec, args.fps, i+1, recording_info, args.visualize))
+
+        try:
+            print("\nPress Ctrl+C {}\n".format("after this item has spinned back and fourth at least twice" if args.multiple_recordings else "to stop recording"))
+            for p in p_recordings: p.wait_for_finish()
+        except (KeyboardInterrupt, SystemExit):  # Wait for user to request to stop recording
+            for p in p_recordings: p.stop_recording()
+            for p in p_recordings: p.wait_for_finish()
+
+        if not args.multiple_recordings:  # Only want to record once, exit
+            break
 
     print("Goodbye! :)")

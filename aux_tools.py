@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import argparse
 import os
+from enum import Enum
 
 
 # Aux functions
@@ -32,6 +33,41 @@ def format_axis_as_timedelta(axis):  # E.g. axis=ax.xaxis
         return s if not s.startswith("0:") else s[2:]
 
     axis.set_major_formatter(plt.FuncFormatter(lambda x, pos: timedelta2str(timedelta(seconds=x))))
+
+def get_nonempty_input(msg):
+    out = ""
+    while len(out) < 1:
+        out = raw_input(msg)
+    return out
+
+
+class JointEnum(Enum):
+    NOSE = 0
+    NECK = 1
+    RSHOULDER = 2
+    RELBOW = 3
+    RWRIST = 4
+    LSHOULDER = 5
+    LELBOW = 6
+    LWRIST = 7
+    MIDHIP = 8
+    RHIP = 9
+    RKNEE = 10
+    RANKLE = 11
+    LHIP = 12
+    LKNEE = 13
+    LANKLE = 14
+    REYE = 15
+    LEYE = 16
+    REAR = 17
+    LEAR = 18
+    LBIGTOE = 19
+    LSMALLTOE = 20
+    LHEEL = 21
+    RBIGTOE = 22
+    RSMALLTOE = 23
+    RHEEL = 24
+    BACKGND = 25
 
 
 class HSVthreshHelper:
@@ -103,7 +139,7 @@ class HSVthreshHelper:
             # Print debugging info if enabled
             if self.show_pixel_info:
                 cv2.circle(out, self.pixel, self.PIXEL_INFO_RADIUS, self.PIXEL_INFO_COLOR, self.PIXEL_INFO_THICKNESS)
-                cv2.putText(out, "{} - {}".format(self.pixel, pixel_hsv), (100, 100), cv2.FONT_HERSHEY_DUPLEX, 1, self.PIXEL_INFO_COLOR)
+                cv2.putText(out, "{} - {} ({})".format(self.pixel, pixel_hsv, self.get_str_lims()), (100, 100), cv2.FONT_HERSHEY_DUPLEX, 1, self.PIXEL_INFO_COLOR)
             cv2.imshow(self.WIN_NAME, out)
 
             # Render
