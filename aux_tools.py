@@ -4,6 +4,11 @@ import argparse
 import os
 from enum import Enum
 
+# Python 2-3 compatibility
+import sys
+if sys.version_info.major < 3:
+    input = raw_input
+
 
 # Aux functions
 def str2bool(s):
@@ -37,7 +42,7 @@ def format_axis_as_timedelta(axis):  # E.g. axis=ax.xaxis
 def get_nonempty_input(msg):
     out = ""
     while len(out) < 1:
-        out = raw_input(msg)
+        out = input(msg)
     return out
 
 

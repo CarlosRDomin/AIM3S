@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from openpose import pyopenpose as op
 from read_dataset import read_weight_data
 from aux_tools import str2bool, _min, _max, ensure_folder_exists, list_subfolders, format_axis_as_timedelta, JointEnum
 from matplotlib import pyplot as plt
@@ -11,7 +10,6 @@ import argparse
 import h5py
 import json
 import os
-import time
 
 DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 HDF5_FRAME_NAME_FORMAT = "frame{:05d}"
@@ -63,6 +61,7 @@ def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_
     if os.path.exists(pose_prefix):
         print("Folder '{}' exists, not running Openpose!".format(pose_prefix))
     else:
+        from openpose import pyopenpose as op
         openpose_params = {
             "model_folder": pose_model_folder,
             "video": video_filename,

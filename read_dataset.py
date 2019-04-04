@@ -4,6 +4,8 @@ import cv2
 import matplotlib.pyplot as plt
 from datetime import datetime
 
+# NOTE: Dependencies for the protos: pip install --upgrade protobuf grpcio googleapis-common-protos
+
 
 DEPTH_RESOLUTION = (720, 1280)
 
