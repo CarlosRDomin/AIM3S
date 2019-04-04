@@ -2,11 +2,10 @@ import cv2
 import numpy as np
 from openpose import pyopenpose as op
 from read_dataset import read_weight_data
-from aux_tools import str2bool, _min, _max, ensure_folder_exists, list_subfolders
+from aux_tools import str2bool, _min, _max, ensure_folder_exists, list_subfolders, format_axis_as_timedelta, JointEnum
 from matplotlib import pyplot as plt
 from datetime import datetime
 from multiprocessing import Pool, cpu_count
-from enum import Enum
 import glob
 import argparse
 import h5py
@@ -17,52 +16,40 @@ import time
 DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 HDF5_FRAME_NAME_FORMAT = "frame{:05d}"
 HDF5_POSE_GROUP_NAME = "pose"
+HDF5_WEIGHT_GROUP_NAME = "weight_{}"
+HDF5_WEIGHT_T_NAME = "t"
+HDF5_WEIGHT_T_STR_NAME = "t_str"
+HDF5_WEIGHT_DATA_NAME = "w"
 CROPPED_IMGS_FOLDER_NAME = "Cropped hands"
 
 
-class JointEnum(Enum):
-    NOSE = 0
-    NECK = 1
-    RSHOULDER = 2
-    RELBOW = 3
-    RWRIST = 4
-    LSHOULDER = 5
-    LELBOW = 6
-    LWRIST = 7
-    MIDHIP = 8
-    RHIP = 9
-    RKNEE = 10
-    RANKLE = 11
-    LHIP = 12
-    LKNEE = 13
-    LANKLE = 14
-    REYE = 15
-    LEYE = 16
-    REAR = 17
-    LEAR = 18
-    LBIGTOE = 19
-    LSMALLTOE = 20
-    LHEEL = 21
-    RBIGTOE = 22
-    RSMALLTOE = 23
-    RHEEL = 24
-    BACKGND = 25
-
-
-def preprocess_weight(parent_folder):
+def preprocess_weight(parent_folder, visualize=False):
     print("Processing weights at {}".format(parent_folder))
+    t_start = os.path.basename(parent_folder)
 
-    for sensor_folder in glob.glob(os.path.join(parent_folder, "sensors_*")):
-        weight_id = int(sensor_folder.rsplit('_', 1)[1])  # Extract the numeric part after "sensors_{}"
-        weight_t, weight_data = read_weight_data(sensor_folder)
+    with h5py.File(os.path.join(parent_folder, "weights_{}.h5".format(t_start)), 'w') as f_hdf5:
+        for sensor_folder in glob.glob(os.path.join(parent_folder, "sensors_*")):
+            weight_id = int(sensor_folder.rsplit('_', 1)[1])  # Extract the numeric part after "sensors_{}"
+            weight_t, weight_data = read_weight_data(sensor_folder)
 
-        fig = plt.figure(figsize=(4, 2))
-        ax = fig.subplots()
-        ax.plot(weight_t, weight_data)
-        ax.set_title('Load cell #{}'.format(weight_id))
-        ax.set_ylabel('Weight (g)')
-        fig.show()
-    time.sleep(3)
+            # Save to h5 file
+            weight_group_name = HDF5_WEIGHT_GROUP_NAME.format(weight_id)
+            if weight_group_name in f_hdf5: del f_hdf5[weight_group_name]  # OVERWRITE (delete if already existed)
+            weight = f_hdf5.create_group(weight_group_name)
+            weight.create_dataset(HDF5_WEIGHT_T_NAME, data=[(t-weight_t[0]).total_seconds() for t in weight_t])
+            weight.create_dataset(HDF5_WEIGHT_T_STR_NAME, data=[str(t).encode('utf8') for t in weight_t])
+            weight.create_dataset(HDF5_WEIGHT_DATA_NAME, data=weight_data)
+
+            if visualize:
+                fig = plt.figure(figsize=(4, 2))
+                ax = fig.subplots()
+                ax.plot(weight_t, weight_data)
+                ax.set_title('Load cell #{}'.format(weight_id))
+                ax.set_ylabel('Weight (g)')
+                format_axis_as_timedelta(ax.xaxis)
+                fig.show()
+            print("Done processing weight #{} (t={}). t_min={}; t_max={}; N={}".format(weight_id, t_start, weight_t[0], weight_t[-1], len(weight_t)))
+    print("Done processing weights at '{}'!".format(parent_folder))
 
 
 def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_half_w=100, crop_half_h=100):
@@ -82,7 +69,6 @@ def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_
             "write_video": pose_prefix + ".mp4",
             "write_json": pose_prefix,  # Will create the folder and save a json per frame in the video
             "display": 0,
-            "logging_level": 3,
             "render_pose": 1,  # 1 for CPU (slightly faster), 2 for GPU
         }
         openpose_wrapper = op.WrapperPython(3)
@@ -142,8 +128,8 @@ class ExperimentPreProcessor:
         self.do_pose = do_pose
         self.pose_model_folder = pose_model_folder
 
-        self.pool_weight = Pool(processes=num_processes_weight)
-        self.pool_vision = Pool(processes=num_processes_vision)
+        self.pool_weight = Pool(processes=num_processes_weight) if do_weight else None
+        self.pool_vision = Pool(processes=num_processes_vision) if do_pose else None
         self.weight_tasks_state = []
         self.vision_tasks_state = []
         self.num_weight_tasks_done = 0
