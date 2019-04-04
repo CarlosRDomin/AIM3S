@@ -39,7 +39,7 @@ def unpack(sensor_data):
         return timestamps, values
 
 
-def read_weight_data(sensor_folder, is_phidget=False):
+def read_weight_data(sensor_folder, do_tare=False, is_phidget=False):
     from sensing_proto.sensors_pb2 import SensorData
 
     sensor_t = []
@@ -59,10 +59,12 @@ def read_weight_data(sensor_folder, is_phidget=False):
 
     # Segments usually aren't read in (time-series) order -> Sort by timestamp
     t_inds = sensor_t.argsort()
-    sensor_t = [datetime.fromtimestamp(t) for t in sensor_t[t_inds]]
-    sensor_data = sensor_data[t_inds,:] if is_phidget else sensor_data[t_inds]
+    sensor_t = np.array([datetime.fromtimestamp(t) for t in sensor_t[t_inds]])
+    sensor_data = np.array(sensor_data[t_inds,:] if is_phidget else sensor_data[t_inds])
+    if do_tare:
+        sensor_data -= sensor_data[0:60].mean().astype(sensor_data.dtype)  # Tare it
 
-    return np.array(sensor_t), np.array(sensor_data)
+    return sensor_t, sensor_data
 
 
 def read_frame_data(frame_filename):

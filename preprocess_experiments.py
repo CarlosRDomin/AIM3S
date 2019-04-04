@@ -21,14 +21,14 @@ HDF5_WEIGHT_DATA_NAME = "w"
 CROPPED_IMGS_FOLDER_NAME = "Cropped hands"
 
 
-def preprocess_weight(parent_folder, visualize=False):
+def preprocess_weight(parent_folder, do_tare=True, visualize=False):
     print("Processing weights at {}".format(parent_folder))
     t_start = os.path.basename(parent_folder)
 
     with h5py.File(os.path.join(parent_folder, "weights_{}.h5".format(t_start)), 'w') as f_hdf5:
         for sensor_folder in glob.glob(os.path.join(parent_folder, "sensors_*")):
             weight_id = int(sensor_folder.rsplit('_', 1)[1])  # Extract the numeric part after "sensors_{}"
-            weight_t, weight_data = read_weight_data(sensor_folder)
+            weight_t, weight_data = read_weight_data(sensor_folder, do_tare)
 
             # Save to h5 file
             weight_group_name = HDF5_WEIGHT_GROUP_NAME.format(weight_id)
@@ -41,7 +41,7 @@ def preprocess_weight(parent_folder, visualize=False):
             if visualize:
                 fig = plt.figure(figsize=(4, 2))
                 ax = fig.subplots()
-                ax.plot(weight_t, weight_data)
+                ax.plot([(t - weight_t[0]).total_seconds() for t in weight_t], weight_data)
                 ax.set_title('Load cell #{}'.format(weight_id))
                 ax.set_ylabel('Weight (g)')
                 format_axis_as_timedelta(ax.xaxis)
