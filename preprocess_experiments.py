@@ -14,6 +14,7 @@ import os
 DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 HDF5_FRAME_NAME_FORMAT = "frame{:05d}"
 HDF5_POSE_GROUP_NAME = "pose"
+HDF5_HANDS_GROUP_NAME = "hands"
 HDF5_WEIGHT_GROUP_NAME = "weight_{}"
 HDF5_WEIGHT_T_NAME = "t"
 HDF5_WEIGHT_T_STR_NAME = "t_str"
@@ -79,7 +80,9 @@ def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_
     video_orig = cv2.VideoCapture(video_filename)
     with h5py.File(video_prefix + ".h5", 'a') as f_hdf5:
         if HDF5_POSE_GROUP_NAME in f_hdf5: del f_hdf5[HDF5_POSE_GROUP_NAME]  # OVERWRITE (delete if already existed)
-        pose = f_hdf5.create_group("pose")
+        if HDF5_HANDS_GROUP_NAME in f_hdf5: del f_hdf5[HDF5_HANDS_GROUP_NAME]
+        pose = f_hdf5.create_group(HDF5_POSE_GROUP_NAME)
+        hands = f_hdf5.create_group(HDF5_HANDS_GROUP_NAME)
 
         # Parse every json
         for frame_i,json_filename in enumerate(sorted(os.listdir(pose_prefix))):
@@ -91,26 +94,28 @@ def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_
                 data = json.load(f_json)
 
             # Parse pose for each person found
-            n_hands = 0
+            hands_info = []
             poses = []
-            for p in data["people"]:
+            for i_person,p in enumerate(data["people"]):
                 keypoints = np.reshape(p["pose_keypoints_2d"], (-1,3))
                 poses.append(keypoints)
 
                 # Look for hands with high enough confidence and crop an image around each one
                 for i_wrist in (JointEnum.LWRIST.value, JointEnum.RWRIST.value):
                     if keypoints[i_wrist,-1] > wrist_thresh:  # Found a wrist with high enough confidence
-                        n_hands += 1
-                        crop_img = _crop_image(frame_img, center=keypoints[i_wrist, 1::-1], half_w=crop_half_w, half_h=crop_half_h)
-                        cv2.imwrite("{}_{}_{:02d}.jpg".format(cropped_img_prefix, frame_i_str, n_hands), crop_img)
+                        center = keypoints[i_wrist, 0:2]
+                        hands_info.append(np.hstack((center, i_person, i_wrist)))  # [x, y, person_id, wrist_id] (wrist_id see JointEnum, 4=Right;7=Left)
+                        crop_img = _crop_image(frame_img, center=center, half_w=crop_half_w, half_h=crop_half_h)
+                        cv2.imwrite("{}_{}_{:02d}.jpg".format(cropped_img_prefix, frame_i_str, len(hands_info)), crop_img)
             pose.create_dataset(frame_i_str, data=poses)
+            hands.create_dataset(frame_i_str, data=hands_info)
 
     print("Done processing video '{}'!".format(video_filename))
 
 
 def _crop_image(img, center, half_w, half_h):
-    center_x = int(center[1])
-    center_y = int(center[0])
+    center_x = int(center[0])
+    center_y = int(center[1])
     x_min = _max(center_x-half_w, 0)
     x_max = _min(center_x+half_w, img.shape[1]-1)
     y_min = _max(center_y-half_h, 0)
