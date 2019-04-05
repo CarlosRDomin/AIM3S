@@ -1,10 +1,11 @@
 from read_dataset import read_weight_data
-from aux_tools import format_axis_as_timedelta
+from aux_tools import format_axis_as_timedelta, str2bool
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 import os
 import h5py
+import argparse
 from datetime import datetime, timedelta
 
 
@@ -27,7 +28,7 @@ def generate_video(experiment_base_folder='Dataset/Characterization/2019-03-31_0
     camera_timestamps = [datetime.strptime(t.decode('utf8'), "%Y-%m-%d %H:%M:%S.%f") for t in camera_info.get("t_str")]
 
     # Manually align weight and cam timestamps (not synced for some reason)
-    weight_to_cam_t_offset = weight_t[0] + timedelta(seconds=11)  # camera_timestamps[0]
+    weight_to_cam_t_offset = weight_t[0] + timedelta(seconds=13)  # camera_timestamps[0]
 
     # Set up matplotlib figure
     fig = plt.figure(figsize=(4,2))
@@ -76,4 +77,16 @@ def generate_video(experiment_base_folder='Dataset/Characterization/2019-03-31_0
 
 
 if __name__ == '__main__':
-    generate_video()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("folder", default="Dataset/Characterization", help="Folder containing the experiment to visualize")
+    parser.add_argument('-c', "--cam", default=1, type=int, help="ID of the camera to visualize")
+    parser.add_argument('-w', "--weight", default=5309446, help="ID of the weight sensor to visualize")
+    parser.add_argument('-t', "--do-tare", default=True, type=str2bool, help="Whether or not to tare the weight scale")
+    parser.add_argument('-l', "--t-lims", default=5, type=float, help="Length (in s) of the weight plot sliding window")
+    parser.add_argument('-s', "--t-start", default=0, type=float, help="Experiment time at which to start generating the video")
+    parser.add_argument('-e', "--t-end", default=-1, type=float, help="Experiment time at which to stop generating the video (-1 for no limit)")
+    parser.add_argument('-k', "--scale", default=0.3, type=float, help="Ratio (0-1) to scale down the weight plot wrt the video's dimensions")
+    parser.add_argument('-r', "--fps", default=25, type=int, help="Output video frame rate")
+    args = parser.parse_args()
+
+    generate_video(args.folder, args.cam, args.weight, args.do_tare, args.t_lims, args.t_start, args.t_end, args.scale, args.fps)

@@ -146,8 +146,6 @@ if __name__ == "__main__":
     parser.add_argument('-v', "--visualize", default=False, action="store_true", help="Append this flag to visualize the camera(s) in an OpenCV window")
     args = parser.parse_args()
 
-
-
     while True:
         recording_info = {}
         if args.multiple_recordings:
@@ -155,7 +153,7 @@ if __name__ == "__main__":
             if item_name.lower() == "quit":
                 break
             item_barcode = get_nonempty_input("Input the item's barcode: ")
-            item_frontback = get_nonempty_input("Is this the front (f) or the back (b)?")
+            item_frontback = get_nonempty_input("Is this the front (f) or the back (b)? ")
             recording_info = {"item_name": item_name, "item_barcode": item_barcode, "item_frontback": item_frontback}
             raw_input("Ready? Press ENTER")
 
