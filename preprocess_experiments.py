@@ -59,7 +59,7 @@ def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_
     ensure_folder_exists(os.path.dirname(cropped_img_prefix))  # Create folder if it didn't exist
 
     # Run Openpose to find people and their poses
-    if os.path.exists(pose_prefix):
+    if os.path.exists(pose_prefix) and len(os.listdir(pose_prefix)) > 0:
         print("Folder '{}' exists, not running Openpose!".format(pose_prefix))
     else:
         from openpose import pyopenpose as op
