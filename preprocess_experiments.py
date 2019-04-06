@@ -174,7 +174,7 @@ class ExperimentPreProcessor:
                         task_state = self.pool_vision.apply_async(preprocess_vision, (video, self.pose_model_folder), kwds, callback=lambda _: self._task_done_cb(is_weight=False))
                         self.vision_tasks_state.append(task_state)
 
-        print("Preprocessing weight tasks enqueued, waiting for them to complete!")
+        print("Preprocessing tasks enqueued, waiting for them to complete!")
         for tasks_state in (self.weight_tasks_state, self.vision_tasks_state):
             for i,task_state in enumerate(tasks_state):
                 task_state.wait()
