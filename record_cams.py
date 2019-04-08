@@ -108,7 +108,7 @@ class ProcessRecordCam:
             config.attrs["stream"] = self.rtsp_stream
             config.attrs["out_filename"] = self.out_filename
             config.attrs["cam_id"] = self.cam_id
-            for info_key, info_value in self.recording_info.iteritems():
+            for info_key, info_value in self.recording_info.items():
                 config.attrs[info_key] = info_value
 
 
