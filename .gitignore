@@ -50,3 +50,6 @@ build/
 .navigation
 captures/
 output.json
+
+# Matlab
+*.m~
