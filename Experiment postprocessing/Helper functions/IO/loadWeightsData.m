@@ -1,13 +1,11 @@
-function [weights, experimentInfo, weightsOrig] = preprocessWeights(experimentType, tStr, movAvgWindowInSec, Fsamp, weightIDs, DATA_FOLDER)
-	if nargin<3 || isempty(movAvgWindowInSec), movAvgWindowInSec = 1.5; end
-	if nargin<4 || isempty(Fsamp), Fsamp = 60; end
-	if nargin<5 || isempty(weightIDs), weightIDs = [5, 12]; end  % A 1x2 vector indicates numShelves x numPlatesPerShelf
-	if nargin<6 || isempty(DATA_FOLDER), DATA_FOLDER = '../Dataset'; end
-	movAvgWindowMat = [round(movAvgWindowInSec*Fsamp)-1 0];  % Used for movmean and movvar
+function [weights, experimentInfo, weightsOrig] = loadWeightsData(experimentType, tStr, Fsamp, weightIDs, DATA_FOLDER)
+	if nargin<3 || isempty(Fsamp), Fsamp = 60; end
+	if nargin<4 || isempty(weightIDs), weightIDs = [5, 12]; end  % A 1x2 vector indicates numShelves x numPlatesPerShelf
+	if nargin<5 || isempty(DATA_FOLDER), DATA_FOLDER = '../Dataset'; end
 	if iscell(weightIDs), s = size(weightIDs); else, s = weightIDs; end
 	weightsOrig = struct('t',cell(s), 'w',cell(s));
 	weights = struct('t',[], 'w',[], 'wMean',[], 'wVar',[]);
-	experimentInfo = struct('experimentType',[], 'tStr',[], 'weightIDs',[], 'Fsamp',[], 'movAvgWindowInSec',[]);
+	experimentInfo = struct('experimentType',[], 'tStr',[], 'weightIDs',[], 'Fsamp',[]);
 	
 	% Load weights
 	data = readHDF5([DATA_FOLDER '/' experimentType '/' tStr '/weights_' tStr '.h5']);
@@ -49,9 +47,6 @@ function [weights, experimentInfo, weightsOrig] = preprocessWeights(experimentTy
 
 			% Resample
 			weights.w(iW,jW,:) = interp1(tOrig, wOrig, weights.t);
-			% Compute moving mean and variance
-			weights.wMean(iW,jW,:) = movmean(weights.w(iW,jW,:), movAvgWindowMat);
-			weights.wVar(iW,jW,:) = movvar(weights.w(iW,jW,:), movAvgWindowMat);
 		end
 	end
 	

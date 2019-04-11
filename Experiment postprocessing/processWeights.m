@@ -1,14 +1,16 @@
 addpath(genpath('.'));	% Make sure all folders and subfolders are added to the path
 cdToThisScriptsDirectory();	% Change directory to the folder containing this script
+systemParams = struct('movAvgWindowInSamples',90, 'epsVar',6e4, 'epsMean',100, 'Nb',60, 'Ne',60);
 
 %% Load experiment
 DATA_FOLDER = '../Dataset';
 experimentType = 'Evaluation';
 tStr = '2019-04-03_19-50-26';
-[weights, experimentInfo, weightsOrig] = preprocessWeights(experimentType, tStr);
+[weights, experimentInfo, weightsOrig] = loadWeightsData(experimentType, tStr);
+[events, weights, eventInds] = detectWeightEvents(weights, 3, systemParams, experimentInfo);
+return
 
-%% Visualize weights
-% One plot per plate
+%% One plot per plate
 figure('WindowState','maximized'); pause(0.1);
 for iW = 1:size(weights.w, 1)
 	for jW = 1:size(weights.w, 2)
@@ -23,7 +25,7 @@ for iW = 1:size(weights.w, 1)
 	end
 end
 
-% All plates in one plot
+%% All plates in one plot
 figure('WindowState','maximized');
 for iW = 1:size(weights.w, 1)
 	for jW = 1:size(weights.w, 2)
@@ -36,14 +38,12 @@ for iW = 1:size(weights.w, 1)
 	end
 end
 
-% Sum of plates in a shelf per plot
+%% Sum of plates in a shelf per plot
 figure('WindowState','maximized');
-movAvgWindow = [round(experimentInfo.movAvgWindowInSec*experimentInfo.Fsamp)-1 0];
-t = weights.t; w = squeeze(sum(weights.w,2));
-wMean = movmean(w, movAvgWindow, 2); wVar = movvar(w, movAvgWindow, 1, 2);
-for iW = 1:size(w, 1)
-	subplot(size(w, 1), 1, iW); hold on;
-	plot(t, w(iW,:)); plot(t, wMean(iW,:), 'LineWidth', 2);
-	yyaxis right; plot(t, wVar(iW,:), '--r', 'LineWidth', 2);
-	set(gca, 'YGrid','on', 'XLim',[t(1) t(end)]);
+weightsPerShelf = aggregateWeightsPerShelf(weights, systemParams);
+for iW = 1:size(weightsPerShelf.w, 1)
+	subplot(size(weightsPerShelf.w, 1), 1, iW); hold on;
+	plot(weightsPerShelf.t, weightsPerShelf.w(iW,:)); plot(weightsPerShelf.t, weightsPerShelf.wMean(iW,:), 'LineWidth', 2);
+	yyaxis right; plot(weightsPerShelf.t, eventInds(iW,:), '--r', 'LineWidth', 2); %plot(weightsPerShelf.t, weightsPerShelf.wVar(iW,:), '--r', 'LineWidth', 2);
+	set(gca, 'YGrid','on', 'XLim',[weightsPerShelf.t(1) weightsPerShelf.t(end)]);
 end
