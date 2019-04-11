@@ -1,46 +1,64 @@
-function [weights, experimentInfo] = preprocessWeights(experimentType, tStr, movAvgWindowInSec, Fsamp, numShelves, numPlatesPerShelf, DATA_FOLDER)
+function [weights, experimentInfo, weightsOrig] = preprocessWeights(experimentType, tStr, movAvgWindowInSec, Fsamp, weightIDs, DATA_FOLDER)
 	if nargin<3 || isempty(movAvgWindowInSec), movAvgWindowInSec = 1.5; end
 	if nargin<4 || isempty(Fsamp), Fsamp = 60; end
-	if nargin<5 || isempty(numShelves), numShelves = 5; end
-	if nargin<6 || isempty(numPlatesPerShelf), numPlatesPerShelf = 12; end
-	if nargin<7 || isempty(DATA_FOLDER), DATA_FOLDER = '../Dataset'; end
-	experimentInfo = struct('experimentType',experimentType, 'tStr',tStr, 'Fsamp',Fsamp, 'movAvgWindowInSec',movAvgWindowInSec);
+	if nargin<5 || isempty(weightIDs), weightIDs = [5, 12]; end  % A 1x2 vector indicates numShelves x numPlatesPerShelf
+	if nargin<6 || isempty(DATA_FOLDER), DATA_FOLDER = '../Dataset'; end
 	movAvgWindowMat = [round(movAvgWindowInSec*Fsamp)-1 0];  % Used for movmean and movvar
-	aux = cell(numShelves,numPlatesPerShelf);
-	weights = struct('tOrig',aux, 'wOrig',aux, 't',aux, 'w',aux, 'wMean',aux, 'wVar',aux);
+	if iscell(weightIDs), s = size(weightIDs); else, s = weightIDs; end
+	weightsOrig = struct('t',cell(s), 'w',cell(s));
+	weights = struct('t',[], 'w',[], 'wMean',[], 'wVar',[]);
+	experimentInfo = struct('experimentType',[], 'tStr',[], 'weightIDs',[], 'Fsamp',[], 'movAvgWindowInSec',[]);
 	
 	% Load weights
 	data = readHDF5([DATA_FOLDER '/' experimentType '/' tStr '/weights_' tStr '.h5']);
-	weightSensorNames = fieldnames(data);
+	if ~iscell(weightIDs)  % A 1x2 vector indicates numShelves x numPlatesPerShelf -> Convert to cell with the actual weight IDs
+		weightSensorNames = fieldnames(data);
+		if prod(weightIDs) ~= length(weightSensorNames)
+			warning('HEADS UP, some weight scales were not recorded in experiment "%s": expected %d, got %d!!', tStr, prod(weightIDs), length(weightSensorNames));
+			% Manually add as many empty entries as needed... :/
+			weightSensorNames = [weightSensorNames; repmat({''}, prod(weightIDs)-length(weightSensorNames), 1)];
+		end
+		weightIDs = reshape(weightSensorNames, weightIDs(2), weightIDs(1))';
+	end
 	tStart = []; tEnd = [];
-	for iS = 1:length(weightSensorNames)
-		weightSensorName = weightSensorNames{iS};
-		%t = datetime(data.(weightSensorName).t_str, 'InputFormat','yyyy-MM-dd HH:mm:ss.SSSSSS'); %t = data.(weightSensorName).t;
-		t = seconds(data.(weightSensorName).t) + datetime(data.(weightSensorName).t_str(1), 'InputFormat','yyyy-MM-dd HH:mm:ss.SSSSSS');
-		w = double(data.(weightSensorName).w);
-		[jW,iW] = ind2sub([numPlatesPerShelf numShelves], iS);
-		weights(iW,jW).tOrig = t; weights(iW,jW).wOrig = w;
-		
-		% Keep track of time of latest weight shelf to start and earliest shelf to end
-		tStart = max(t(1), tStart, 'omitNaT'); tEnd = min(t(end), tEnd, 'omitNaT');
+	for iW = 1:size(weightIDs, 1)
+		for jW = 1:size(weightIDs, 2)
+			weightID = weightIDs{iW,jW};
+			if isempty(weightID), continue; end
+			
+			weightsOrig(iW,jW).t = seconds(data.(weightID).t) + datetime(data.(weightID).t_str(1), 'InputFormat','yyyy-MM-dd HH:mm:ss.SSSSSS');
+			weightsOrig(iW,jW).w = double(data.(weightID).w);
+
+			% Keep track of time of latest weight shelf to start and earliest shelf to end
+			tStart = max(weightsOrig(iW,jW).t(1), tStart, 'omitNaT');
+			tEnd = min(weightsOrig(iW,jW).t(end), tEnd, 'omitNaT');
+		end
 	end
 	
 	% Resample all weights to a common time
-	t = tStart:seconds(1/Fsamp):tEnd;
-	for iW = 1:size(weights, 1)
-		for jW = 1:size(weights, 2)
+	weights.t = tStart:seconds(1/Fsamp):tEnd;
+	weights.w = zeros([size(weightIDs), length(weights.t)]);
+	weights.wMean = zeros(size(weights.w));
+	weights.wVar = zeros(size(weights.w));
+	for iW = 1:size(weightIDs, 1)
+		for jW = 1:size(weightIDs, 2)
 			% First, remove values with exactly the same time (otherwise interp1 will error)
-			tOrig = weights(iW,jW).tOrig; wOrig = weights(iW,jW).wOrig; indsRemove = (diff(tOrig)==0);
+			tOrig = weightsOrig(iW,jW).t; wOrig = weightsOrig(iW,jW).w; indsRemove = (diff(tOrig)==0);
 			tOrig(indsRemove) = []; wOrig(indsRemove) = [];
 			if isempty(tOrig), continue; end  % Sometimes we forgot to record some weight scales, ignore those
 
 			% Resample
-			weights(iW,jW).t = t;
-			weights(iW,jW).w = interp1(tOrig, wOrig, weights(iW,jW).t);
+			weights.w(iW,jW,:) = interp1(tOrig, wOrig, weights.t);
 			% Compute moving mean and variance
-			weights(iW,jW).wMean = movmean(weights(iW,jW).w, movAvgWindowMat);
-			weights(iW,jW).wVar = movvar(weights(iW,jW).w, movAvgWindowMat);
+			weights.wMean(iW,jW,:) = movmean(weights.w(iW,jW,:), movAvgWindowMat);
+			weights.wVar(iW,jW,:) = movvar(weights.w(iW,jW,:), movAvgWindowMat);
 		end
+	end
+	
+	% Fill in experimentInfo
+	fNames = fieldnames(experimentInfo);
+	for f = 1:length(fNames)
+		experimentInfo.(fNames{f}) = eval(fNames{f});
 	end
 end
 
