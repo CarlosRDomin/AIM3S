@@ -1,4 +1,4 @@
-function [events, weights, eventInds] = detectWeightEvents(weightsOrig, plateWidth, systemParams, experimentInfo)
+function [events, weights] = detectWeightEvents(weightsOrig, plateWidth, systemParams, experimentInfo)
 	if nargin<3 || isempty(systemParams), systemParams = struct('epsVar',100, 'epsMean',10, 'Nb',60, 'Ne',60, 'movAvgWindowInSamples',90); end
 	if nargin<4, experimentInfo = []; end
 	events = struct('t',{}, 'nB',{}, 'nE',{}, 'deltaW',{}, 'weightIDs',{}, 'plates',{}, 'shelf',{});
@@ -17,7 +17,6 @@ function [events, weights, eventInds] = detectWeightEvents(weightsOrig, plateWid
 	end
 	weights = computeWeightMeanAndVar(weights, systemParams);
 	weightsPerShelf = aggregateWeightsPerShelf(weights, systemParams);
-	eventInds = false(size(weightsPerShelf.w));
 	
 	% Detect events
 	wVarIsActive = (weightsPerShelf.wVar > systemParams.epsVar);
@@ -44,7 +43,6 @@ function [events, weights, eventInds] = detectWeightEvents(weightsOrig, plateWid
 			wE = weightsPerShelf.wMean(i, nE);
 			deltaW = wE - wB;
 			if deltaW > 0, t = nB; else, t = nE; end  % Trigger time: beginning for putbacks, end for pickups
-			eventInds(i, nB:nE) = true;
 			
 			% Determine contributing plates
 			plates = find(abs(weights.wMean(i,:,nE) - weights.wMean(i,:,nB)) > systemParams.epsMean);
