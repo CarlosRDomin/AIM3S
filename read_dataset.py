@@ -39,17 +39,40 @@ def unpack(sensor_data):
         return timestamps, values
 
 
-def read_weight_data(sensor_folder, do_tare=False, is_phidget=False):
+def parse_weight_calibration(calib_file):
+    import json
+
+    if calib_file is None:
+        calib_file = "Dataset/weight_calibration.json"
+
+    # Parse the calibration json
+    with open(calib_file) as f:
+        calib = json.load(f)
+
+    # Generate a dictionary with the ID of each plate as the keys, and {slope, offset} for each ID
+    weight_params = {}
+    for shelf in calib['shelves']:
+        for plate in shelf['plates']:
+            weight_params[plate['id']] = {'slope': plate['slope'], 'offset': plate['offset']}
+
+    return weight_params
+
+
+def read_weight_data(sensor_folder, calib_file=None, do_tare=False, is_phidget=False):
     from sensing_proto.sensors_pb2 import SensorData
 
     sensor_t = []
     sensor_data = []
+    sensor_id = int(sensor_folder.rsplit('_',1)[1])  # Plate ID is the numbers that come after the '_' on the folder name
+    weight_calib = parse_weight_calibration(calib_file)
 
     # Parse every file in the folder (order doesn't matter, will sort by timestamp later)
     for filename in os.listdir(sensor_folder):
         with open(os.path.join(sensor_folder, filename), 'rb') as f:
             data = SensorData.FromString(f.read())
             t, weights = unpack(data)
+            if weight_calib is not None:
+                weights = (weights - weight_calib[sensor_id]['offset']) * weight_calib[sensor_id]['slope']
             sensor_t.append(t)
             sensor_data.append(weights)
 
