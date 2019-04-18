@@ -2,54 +2,16 @@
 *.pyc
 *__pycache__/
 
-# dependencies
-node_modules
-
-# testing
-/coverage
-
-# production
-visualization/build
-
 # misc
 .DS_Store
 .idea/
 .env.*
 
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
 # Ignore autoenvs
 .autoenv
 
-# vim swap files
-*.swp
-
-#built application files
-*.apk
-*.ap_
-
-# files for the dex VM
-*.dex
-
-# Java class files
-*.class
-
-# generated files
-bin/
-gen/
-
-# Local configuration file (sdk path, etc)
-local.properties
-
-# Android Studio
-*.iml
-.gradle
-build/
-.navigation
-captures/
-output.json
-
 # Matlab
 *.m~
+
+# Other
+Dataset/
