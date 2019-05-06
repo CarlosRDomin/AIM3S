@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import argparse
+import pytz
 import os
 from enum import Enum
 
@@ -46,6 +47,9 @@ def get_nonempty_input(msg):
     return out
 
 
+# Aux constants & enums
+DEFAULT_TIMEZONE = pytz.timezone('America/Los_Angeles')
+
 class JointEnum(Enum):
     NOSE = 0
     NECK = 1
@@ -75,6 +79,7 @@ class JointEnum(Enum):
     BACKGND = 25
 
 
+# Aux helper classes
 class HSVthreshHelper:
     WIN_NAME = "HSV thresholding aux tool"
     PIXEL_INFO_RADIUS = 3

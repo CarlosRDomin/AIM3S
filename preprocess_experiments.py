@@ -28,8 +28,7 @@ def preprocess_weight(parent_folder, do_tare=False, visualize=False):
 
     with h5py.File(os.path.join(parent_folder, "weights_{}.h5".format(t_start)), 'w') as f_hdf5:
         for sensor_folder in glob.glob(os.path.join(parent_folder, "sensors_*")):
-            weight_id = int(sensor_folder.rsplit('_', 1)[1])  # Extract the numeric part after "sensors_{}"
-            weight_t, weight_data = read_weight_data(sensor_folder, do_tare=do_tare)
+            weight_t, weight_data, weight_id = read_weight_data(sensor_folder, do_tare=do_tare)
 
             # Save to h5 file
             weight_group_name = HDF5_WEIGHT_GROUP_NAME.format(weight_id)

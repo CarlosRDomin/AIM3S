@@ -1,8 +1,10 @@
 import os
+import glob
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 from datetime import datetime
+from aux_tools import _min, _max, DEFAULT_TIMEZONE
 
 # NOTE: Dependencies for the protos: pip install --upgrade protobuf grpcio googleapis-common-protos
 
@@ -28,21 +30,21 @@ def decode_numpy_object(encoded_numpy):
 
 
 def unpack(sensor_data):
-        """Unpack the sensor data payload into each timestamp and value"""
-        # values = decode_numpy_object(sensor_data.values)[:-1, :].T
-        values = decode_numpy_object(sensor_data.values).T
-        last_ts = sensor_data.t_latest.ToMilliseconds() / 1000.0
-        # Compute timestamp for each measurement
-        num_readings = values.shape[0]
-        offset = num_readings / sensor_data.F_samp
-        timestamps = np.linspace(last_ts - offset, last_ts, num_readings)
-        return timestamps, values
+    """Unpack the sensor data payload into each timestamp and value"""
+    # values = decode_numpy_object(sensor_data.values)[:-1, :].T
+    values = decode_numpy_object(sensor_data.values).T
+    last_ts = sensor_data.t_latest.ToMilliseconds()/1000.0
+    # Compute timestamp for each measurement
+    num_readings = values.shape[0]
+    offset = num_readings/sensor_data.F_samp
+    timestamps = np.linspace(last_ts-offset, last_ts, num_readings)
+    return timestamps, values
 
 
 def parse_weight_calibration(calib_file):
     import json
 
-    if calib_file is None:
+    if calib_file == "":
         calib_file = "Dataset/weight_calibration.json"
 
     # Parse the calibration json
@@ -52,19 +54,20 @@ def parse_weight_calibration(calib_file):
     # Generate a dictionary with the ID of each plate as the keys, and {slope, offset} for each ID
     weight_params = {}
     for shelf in calib['shelves']:
-        for plate in shelf['plates']:
-            weight_params[plate['id']] = {'slope': plate['slope'], 'offset': plate['offset']}
+        for plate_num,plate in enumerate(shelf['plates']):
+            weight_params[plate['id']] = {'slope': plate['slope'], 'offset': plate['offset'], 'shelf_id': shelf['id'], 'plate_num': plate_num+1}  # NOTE: shelf_id and plate_num use 1-based indexing
 
     return weight_params
 
 
-def read_weight_data(sensor_folder, calib_file=None, do_tare=False, is_phidget=False):
+def read_weight_data(sensor_folder, weight_calib=None, do_tare=False, is_phidget=False):
     from sensing_proto.sensors_pb2 import SensorData
+    if isinstance(weight_calib, str):
+        weight_calib = parse_weight_calibration(weight_calib)
 
     sensor_t = []
     sensor_data = []
-    sensor_id = int(sensor_folder.rsplit('_',1)[1])  # Plate ID is the numbers that come after the '_' on the folder name
-    weight_calib = parse_weight_calibration(calib_file)
+    sensor_id = int(sensor_folder.rsplit('_', 1)[1])  # Plate ID is the numbers that come after the '_' on the folder name
 
     # Parse every file in the folder (order doesn't matter, will sort by timestamp later)
     for filename in os.listdir(sensor_folder):
@@ -72,7 +75,7 @@ def read_weight_data(sensor_folder, calib_file=None, do_tare=False, is_phidget=F
             data = SensorData.FromString(f.read())
             t, weights = unpack(data)
             if weight_calib is not None:
-                weights = (weights - weight_calib[sensor_id]['offset']) * weight_calib[sensor_id]['slope']
+                weights = (weights-weight_calib[sensor_id]['offset'])*weight_calib[sensor_id]['slope']
             sensor_t.append(t)
             sensor_data.append(weights)
 
@@ -82,12 +85,38 @@ def read_weight_data(sensor_folder, calib_file=None, do_tare=False, is_phidget=F
 
     # Segments usually aren't read in (time-series) order -> Sort by timestamp
     t_inds = sensor_t.argsort()
-    sensor_t = np.array([datetime.fromtimestamp(t) for t in sensor_t[t_inds]])
-    sensor_data = np.array(sensor_data[t_inds,:] if is_phidget else sensor_data[t_inds])
+    sensor_t = np.array([DEFAULT_TIMEZONE.localize(datetime.fromtimestamp(t)) for t in sensor_t[t_inds]])
+    sensor_data = np.array(sensor_data[t_inds, :] if is_phidget else sensor_data[t_inds])
     if do_tare:
         sensor_data -= sensor_data[0:60].mean().astype(sensor_data.dtype)  # Tare it
 
-    return sensor_t, sensor_data
+    return sensor_t, sensor_data, sensor_id
+
+
+def read_weights_data(experiment_folder, calib_file, F_samp=60, *args, **kwargs):
+    weight_calib = parse_weight_calibration(calib_file)  # Load calibration file to figure out the plate and shelf arrangement
+    shelves = {}  # Keeps track of what shelves have at least 1 plate. Keys are shelf_id's, values are largest plate_id (number of plates in that shelf)
+    weights = {}  # We first load all weights and track them by plate_id. Then, we arrange each shelf in a multidimensional numpy array
+
+    # Load all weights
+    t_latest_start = datetime.min
+    t_earliest_end = datetime.max
+    for sensor_folder in glob.glob(os.path.join(experiment_folder, "sensors_*")):
+        # Read weight
+        weight_t, weight_data, plate_id = read_weight_data(sensor_folder, weight_calib, *args, **kwargs)
+        # Store results
+        weights[plate_id] = {'t': weight_t, 'w': weight_data}
+        t_latest_start = _max(weight_t[0], t_latest_start)
+        t_earliest_end = _min(weight_t[-1], t_earliest_end)
+        # Keep track of how many plates each shelf has
+        shelf_id = weight_calib[plate_id]['shelf_id']
+        shelves[shelf_id] = _max(weight_calib[plate_id]['plate_num'], shelves.get(shelf_id, 0))
+
+    # Resample the whole fixture as if it had been sampled at fixed F_samp
+    t = np.arange(t_latest_start, t_earliest_end+1/F_samp, 1/F_samp)
+    w = np.zeros((len(shelves), max(shelves.values())), dtype=np.float32)
+    for weight in weights:
+        pass
 
 
 def read_frame_data(frame_filename):
@@ -106,8 +135,7 @@ def read_frame_data(frame_filename):
         return rgb_data, depth_data, depth_colormap, data
 
 
-def visualize_weight():
-    base_folder = '2019-01-30_PoC/2019-01-30_02:07:40_AIM3S_PoC_rec1/sensors_1'
+def visualize_weight(base_folder='2019-01-30_PoC/2019-01-30_02:07:40_AIM3S_PoC_rec1/sensors_1'):
     sensor_t, sensor_data = read_weight_data(base_folder)
 
     # Visualize
@@ -116,8 +144,7 @@ def visualize_weight():
     plt.waitforbuttonpress()
 
 
-def visualize_frame():
-    base_folder = '2019-01-30_PoC/2019-01-30_02:07:40_AIM3S_PoC_rec1/frames_26'
+def visualize_frame(base_folder='2019-01-30_PoC/2019-01-30_02:07:40_AIM3S_PoC_rec1/frames_26'):
     for filename in os.listdir(base_folder):
         rgb_data, _, depth_colormap, _ = read_frame_data(os.path.join(base_folder, filename))
 
