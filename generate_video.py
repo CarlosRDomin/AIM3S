@@ -1,4 +1,4 @@
-from read_dataset import read_weight_data
+from read_dataset import read_weight_data, read_weights_data
 from aux_tools import format_axis_as_timedelta, str2bool, DEFAULT_TIMEZONE
 import cv2
 import numpy as np
@@ -17,9 +17,12 @@ def plt_fig_to_cv2_img(fig):
     return img
 
 
-def generate_video(experiment_base_folder='Dataset/Characterization/2019-03-31_00-00-02', camera_id=3, weight_id=5309446, do_tare=True, t_lims=5, t_start=0, t_end=-1, weight_plot_scale=0.3, video_fps=25):
+def generate_video(experiment_base_folder='Dataset/Characterization/2019-03-31_00-00-02', camera_id=3, weight_id=5309446, do_tare=False, t_lims=5, t_start=0, t_end=-1, weight_plot_scale=0.3, video_fps=25):
     # Read all weight sensors for the full experiment duration at once
-    weight_t, weight_data, _ = read_weight_data(os.path.join(experiment_base_folder, 'sensors_{}'.format(weight_id)), do_tare=do_tare)
+    if weight_id < 0:
+        weight_t, weight_data, _ = read_weights_data(experiment_base_folder)
+    else:
+        weight_t, weight_data, _ = read_weight_data(os.path.join(experiment_base_folder, 'sensors_{}'.format(weight_id)), do_tare=do_tare)
 
     # Set up camera files to read
     t_experiment_start = experiment_base_folder.rsplit('/', 1)[-1]  # Last folder in the path should indicate time at which experiment started

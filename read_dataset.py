@@ -3,8 +3,9 @@ import glob
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-from datetime import datetime
-from aux_tools import _min, _max, DEFAULT_TIMEZONE
+from scipy.interpolate import interp1d
+from datetime import datetime, timedelta
+from aux_tools import _min, _max, DEFAULT_TIMEZONE, date_range, time_to_float
 
 # NOTE: Dependencies for the protos: pip install --upgrade protobuf grpcio googleapis-common-protos
 
@@ -54,7 +55,7 @@ def parse_weight_calibration(calib_file):
     # Generate a dictionary with the ID of each plate as the keys, and {slope, offset} for each ID
     weight_params = {}
     for shelf in calib['shelves']:
-        for plate_num,plate in enumerate(shelf['plates']):
+        for plate_num, plate in enumerate(shelf['plates']):
             weight_params[plate['id']] = {'slope': plate['slope'], 'offset': plate['offset'], 'shelf_id': shelf['id'], 'plate_num': plate_num+1}  # NOTE: shelf_id and plate_num use 1-based indexing
 
     return weight_params
@@ -93,14 +94,14 @@ def read_weight_data(sensor_folder, weight_calib=None, do_tare=False, is_phidget
     return sensor_t, sensor_data, sensor_id
 
 
-def read_weights_data(experiment_folder, calib_file, F_samp=60, *args, **kwargs):
+def read_weights_data(experiment_folder, calib_file="", F_samp=60, *args, **kwargs):
     weight_calib = parse_weight_calibration(calib_file)  # Load calibration file to figure out the plate and shelf arrangement
     shelves = {}  # Keeps track of what shelves have at least 1 plate. Keys are shelf_id's, values are largest plate_id (number of plates in that shelf)
     weights = {}  # We first load all weights and track them by plate_id. Then, we arrange each shelf in a multidimensional numpy array
 
     # Load all weights
-    t_latest_start = datetime.min
-    t_earliest_end = datetime.max
+    t_latest_start = datetime.min.replace(tzinfo=DEFAULT_TIMEZONE)
+    t_earliest_end = datetime.max.replace(tzinfo=DEFAULT_TIMEZONE)
     for sensor_folder in glob.glob(os.path.join(experiment_folder, "sensors_*")):
         # Read weight
         weight_t, weight_data, plate_id = read_weight_data(sensor_folder, weight_calib, *args, **kwargs)
@@ -113,10 +114,16 @@ def read_weights_data(experiment_folder, calib_file, F_samp=60, *args, **kwargs)
         shelves[shelf_id] = _max(weight_calib[plate_id]['plate_num'], shelves.get(shelf_id, 0))
 
     # Resample the whole fixture as if it had been sampled at fixed F_samp
-    t = np.arange(t_latest_start, t_earliest_end+1/F_samp, 1/F_samp)
-    w = np.zeros((len(shelves), max(shelves.values())), dtype=np.float32)
-    for weight in weights:
-        pass
+    t = np.array(list(date_range(t_latest_start, t_earliest_end, timedelta(seconds=1/F_samp))))
+    w = np.zeros((len(shelves), max(shelves.values()), len(t)), dtype=np.float32)
+    to_float = lambda t_arr: np.array(time_to_float(t_arr, t_latest_start))
+    for plate_id, weight in weights.items():
+        calib_info = weight_calib[plate_id]
+        weight_t = to_float(weight['t'])
+        valid_inds = np.hstack((True, np.logical_not(np.equal(weight_t[1:], weight_t[:-1]))))
+        w[calib_info['shelf_id']-1, calib_info['plate_num']-1, :] = interp1d(weight_t[valid_inds], weight['w'][valid_inds], kind='cubic', copy=False, assume_sorted=True)(to_float(t))
+
+    return t, w, weights
 
 
 def read_frame_data(frame_filename):

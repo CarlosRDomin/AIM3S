@@ -46,6 +46,16 @@ def get_nonempty_input(msg):
         out = input(msg)
     return out
 
+def date_range(t_start, t_end, t_delta):
+    t = t_start
+    while t < t_end:
+        yield t
+        t += t_delta
+
+def time_to_float(t_arr, t_ref=None):
+    if t_ref is None: t_ref = t_arr[0]
+    return [(t-t_ref).total_seconds() for t in t_arr]
+
 
 # Aux constants & enums
 DEFAULT_TIMEZONE = pytz.timezone('America/Los_Angeles')
