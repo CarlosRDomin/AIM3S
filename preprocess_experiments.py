@@ -11,15 +11,35 @@ import h5py
 import json
 import os
 
+
+class BackgroundSubtractor:
+    def __init__(self):
+        self.fgbg2 = cv2.bgsegm.createBackgroundSubtractorMOG()
+        self.fgbg3 = cv2.bgsegm.createBackgroundSubtractorGMG()
+        self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+
+    def runGMG(self, frame):
+        mask = self.fgbg3.apply(frame)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.kernel)
+        return mask
+
+    def runMOG(self, frame):
+        mask = self.fgbg2.apply(frame)
+        return mask
+
+    def run(self, frame):
+        return self.runMOG(frame)
+
+
 DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 HDF5_FRAME_NAME_FORMAT = "frame{:05d}"
 HDF5_POSE_GROUP_NAME = "pose"
 HDF5_HANDS_GROUP_NAME = "hands"
+HDF5_BACKGROUND_MASKS_GROUP_NAME = "background_masks"
 HDF5_WEIGHT_GROUP_NAME = "weight_{}"
 HDF5_WEIGHT_T_NAME = "t"
 HDF5_WEIGHT_T_STR_NAME = "t_str"
 HDF5_WEIGHT_DATA_NAME = "w"
-CROPPED_IMGS_FOLDER_NAME = "Cropped hands"
 
 
 def preprocess_weight(parent_folder, do_tare=False, visualize=False):
@@ -54,8 +74,7 @@ def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_
     print("Processing video '{}'...".format(video_filename))
     video_prefix = os.path.splitext(video_filename)[0]  # Remove extension
     pose_prefix = video_prefix + "_pose"
-    cropped_img_prefix = os.path.join(os.path.dirname(video_prefix), CROPPED_IMGS_FOLDER_NAME, os.path.basename(video_prefix))
-    ensure_folder_exists(os.path.dirname(cropped_img_prefix))  # Create folder if it didn't exist
+    mask_prefix = video_prefix + "_mask"
 
     # Run Openpose to find people and their poses
     if os.path.exists(pose_prefix) and len(os.listdir(pose_prefix)) > 0:
@@ -75,18 +94,30 @@ def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_
         openpose_wrapper.execute()  # Blocking call
         print("Openpose done processing video '{}'!".format(video_filename))
 
-    # Postprocess json files (one per frame), combine into a single hdf file and crop image around hands
+    # Initialize background subtractor
     video_orig = cv2.VideoCapture(video_filename)
+    video_mask = cv2.VideoWriter("{}.mp4".format(mask_prefix), cv2.VideoWriter_fourcc(*'avc1'), 25.0,
+            (int(video_orig.get(cv2.CAP_PROP_FRAME_WIDTH)), int(video_orig.get(cv2.CAP_PROP_FRAME_HEIGHT))))
+    bgnd_subtractor = BackgroundSubtractor()
+
+    # Postprocess json files (one per frame) + combine into a single hdf file, as well as compute bgnd subtraction mask
     with h5py.File(video_prefix + ".h5", 'a') as f_hdf5:
         if HDF5_POSE_GROUP_NAME in f_hdf5: del f_hdf5[HDF5_POSE_GROUP_NAME]  # OVERWRITE (delete if already existed)
         if HDF5_HANDS_GROUP_NAME in f_hdf5: del f_hdf5[HDF5_HANDS_GROUP_NAME]
+        if HDF5_BACKGROUND_MASKS_GROUP_NAME in f_hdf5: del f_hdf5[HDF5_BACKGROUND_MASKS_GROUP_NAME]
         pose = f_hdf5.create_group(HDF5_POSE_GROUP_NAME)
         hands = f_hdf5.create_group(HDF5_HANDS_GROUP_NAME)
+        background_masks = f_hdf5.create_group(HDF5_BACKGROUND_MASKS_GROUP_NAME)
 
-        # Parse every json
+        # Parse every json (every frame of video_orig)
         for frame_i,json_filename in enumerate(sorted(os.listdir(pose_prefix))):
             frame_i_str = HDF5_FRAME_NAME_FORMAT.format(frame_i+1)
             _, frame_img = video_orig.read()
+
+            # Run background subtractor
+            background_mask = bgnd_subtractor.run(frame_img)
+            background_removed_img = cv2.bitwise_and(frame_img, frame_img, mask=background_mask)
+            video_mask.write(background_removed_img)
 
             # Parse frame json
             with open(os.path.join(pose_prefix, json_filename)) as f_json:
@@ -104,11 +135,12 @@ def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_
                     if keypoints[i_wrist,-1] > wrist_thresh:  # Found a wrist with high enough confidence
                         center = keypoints[i_wrist, 0:2]
                         hands_info.append(np.hstack((center, i_person, i_wrist)))  # [x, y, person_id, wrist_id] (wrist_id see JointEnum, 4=Right;7=Left)
-                        crop_img = _crop_image(frame_img, center=center, half_w=crop_half_w, half_h=crop_half_h)
-                        cv2.imwrite("{}_{}_{:02d}.jpg".format(cropped_img_prefix, frame_i_str, len(hands_info)), crop_img)
             pose.create_dataset(frame_i_str, data=poses)
             hands.create_dataset(frame_i_str, data=hands_info)
+            background_masks.create_dataset(frame_i_str, data=(background_mask==255))  # Convert to bool (less space)
 
+    video_mask.release()
+    print("Background subtracted video successfully saved as '{}.mp4'! :)".format(mask_prefix))
     print("Done processing video '{}'!".format(video_filename))
 
 
