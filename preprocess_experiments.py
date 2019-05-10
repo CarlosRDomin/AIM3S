@@ -14,6 +14,7 @@ import os
 
 class BackgroundSubtractor:
     def __init__(self):
+        self.fgbg = cv2.bgsegm.createBackgroundSubtractorGSOC()
         self.fgbg2 = cv2.bgsegm.createBackgroundSubtractorMOG()
         self.fgbg3 = cv2.bgsegm.createBackgroundSubtractorGMG()
         self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
@@ -24,11 +25,13 @@ class BackgroundSubtractor:
         return mask
 
     def runMOG(self, frame):
-        mask = self.fgbg2.apply(frame)
-        return mask
+        return self.fgbg2.apply(frame)
+
+    def runGSOC(self, frame):
+        return self.fgbg.apply(frame)
 
     def run(self, frame):
-        return self.runMOG(frame)
+        return self.runGSOC(frame)
 
 
 DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
