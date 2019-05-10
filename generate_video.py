@@ -192,25 +192,25 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
             k = cv2.waitKeyEx(1)
             do_skip_frames = False
             if k == 63234:  # Left arrow (at least on my Mac)
-                weight_to_cam_t_offset -= LEFT_RIGHT_MULTIPLIER*TIME_INCREMENT
-            elif k == 63235:  # Right arrow
-                weight_to_cam_t_offset += LEFT_RIGHT_MULTIPLIER*TIME_INCREMENT
-            elif k == 63232:  # Up arrow
-                weight_to_cam_t_offset -= TIME_INCREMENT
-            elif k == 63233:  # Down arrow
-                weight_to_cam_t_offset += TIME_INCREMENT
-            elif k == ord('a'):
                 n -= LEFT_RIGHT_MULTIPLIER*FRAME_INCREMENT
                 do_skip_frames = True
-            elif k == ord('d'):
+            elif k == 63235:  # Right arrow
                 n += LEFT_RIGHT_MULTIPLIER*FRAME_INCREMENT
                 do_skip_frames = True
-            elif k == ord('w'):
+            elif k == 63232:  # Up arrow
                 n += FRAME_INCREMENT
                 do_skip_frames = True
-            elif k == ord('s'):
+            elif k == 63233:  # Down arrow
                 n -= FRAME_INCREMENT
                 do_skip_frames = True
+            elif k == ord('a'):
+                weight_to_cam_t_offset -= LEFT_RIGHT_MULTIPLIER*TIME_INCREMENT
+            elif k == ord('d'):
+                weight_to_cam_t_offset += LEFT_RIGHT_MULTIPLIER*TIME_INCREMENT
+            elif k == ord('w'):
+                weight_to_cam_t_offset -= TIME_INCREMENT
+            elif k == ord('s'):
+                weight_to_cam_t_offset += TIME_INCREMENT
             elif k == ord(' '):
                 is_paused = not is_paused
             elif k > 0:
