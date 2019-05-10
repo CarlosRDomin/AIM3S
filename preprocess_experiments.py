@@ -35,11 +35,11 @@ DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 HDF5_FRAME_NAME_FORMAT = "frame{:05d}"
 HDF5_POSE_GROUP_NAME = "pose"
 HDF5_HANDS_GROUP_NAME = "hands"
-HDF5_BACKGROUND_MASKS_GROUP_NAME = "background_masks"
 HDF5_WEIGHT_GROUP_NAME = "weight_{}"
 HDF5_WEIGHT_T_NAME = "t"
 HDF5_WEIGHT_T_STR_NAME = "t_str"
 HDF5_WEIGHT_DATA_NAME = "w"
+BACKGROUND_MASKS_FOLDER_NAME = "background_masks"
 
 
 def preprocess_weight(parent_folder, do_tare=False, visualize=False):
@@ -74,7 +74,8 @@ def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_
     print("Processing video '{}'...".format(video_filename))
     video_prefix = os.path.splitext(video_filename)[0]  # Remove extension
     pose_prefix = video_prefix + "_pose"
-    mask_prefix = video_prefix + "_mask"
+    mask_prefix = os.path.join(os.path.dirname(video_prefix), BACKGROUND_MASKS_FOLDER_NAME, os.path.basename(video_prefix) + "_mask")
+    ensure_folder_exists(os.path.dirname(mask_prefix))  # Create folder if it didn't exist
 
     # Run Openpose to find people and their poses
     if os.path.exists(pose_prefix) and len(os.listdir(pose_prefix)) > 0:
@@ -96,7 +97,7 @@ def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_
 
     # Initialize background subtractor
     video_orig = cv2.VideoCapture(video_filename)
-    video_mask = cv2.VideoWriter("{}.mp4".format(mask_prefix), cv2.VideoWriter_fourcc(*'avc1'), 25.0,
+    video_mask = cv2.VideoWriter("{}_mask.mp4".format(video_prefix), cv2.VideoWriter_fourcc(*'avc1'), 25.0,
             (int(video_orig.get(cv2.CAP_PROP_FRAME_WIDTH)), int(video_orig.get(cv2.CAP_PROP_FRAME_HEIGHT))))
     bgnd_subtractor = BackgroundSubtractor()
 
@@ -104,10 +105,8 @@ def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_
     with h5py.File(video_prefix + ".h5", 'a') as f_hdf5:
         if HDF5_POSE_GROUP_NAME in f_hdf5: del f_hdf5[HDF5_POSE_GROUP_NAME]  # OVERWRITE (delete if already existed)
         if HDF5_HANDS_GROUP_NAME in f_hdf5: del f_hdf5[HDF5_HANDS_GROUP_NAME]
-        if HDF5_BACKGROUND_MASKS_GROUP_NAME in f_hdf5: del f_hdf5[HDF5_BACKGROUND_MASKS_GROUP_NAME]
         pose = f_hdf5.create_group(HDF5_POSE_GROUP_NAME)
         hands = f_hdf5.create_group(HDF5_HANDS_GROUP_NAME)
-        background_masks = f_hdf5.create_group(HDF5_BACKGROUND_MASKS_GROUP_NAME)
 
         # Parse every json (every frame of video_orig)
         for frame_i,json_filename in enumerate(sorted(os.listdir(pose_prefix))):
@@ -137,10 +136,9 @@ def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_
                         hands_info.append(np.hstack((center, i_person, i_wrist)))  # [x, y, person_id, wrist_id] (wrist_id see JointEnum, 4=Right;7=Left)
             pose.create_dataset(frame_i_str, data=poses)
             hands.create_dataset(frame_i_str, data=hands_info)
-            background_masks.create_dataset(frame_i_str, data=(background_mask==255))  # Convert to bool (less space)
+            cv2.imwrite("{}_{}.png".format(mask_prefix, frame_i_str), background_mask)
 
     video_mask.release()
-    print("Background subtracted video successfully saved as '{}.mp4'! :)".format(mask_prefix))
     print("Done processing video '{}'!".format(video_filename))
 
 
