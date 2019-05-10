@@ -4,11 +4,45 @@ import argparse
 import pytz
 import os
 from enum import Enum
+from datetime import datetime
 
 # Python 2-3 compatibility
 import sys
 if sys.version_info.major < 3:
     input = raw_input
+
+
+# Aux constants & enums
+DEFAULT_TIMEZONE = pytz.timezone('America/Los_Angeles')
+DATETIME_STR_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
+
+class JointEnum(Enum):
+    NOSE = 0
+    NECK = 1
+    RSHOULDER = 2
+    RELBOW = 3
+    RWRIST = 4
+    LSHOULDER = 5
+    LELBOW = 6
+    LWRIST = 7
+    MIDHIP = 8
+    RHIP = 9
+    RKNEE = 10
+    RANKLE = 11
+    LHIP = 12
+    LKNEE = 13
+    LANKLE = 14
+    REYE = 15
+    LEYE = 16
+    REAR = 17
+    LEAR = 18
+    LBIGTOE = 19
+    LSMALLTOE = 20
+    LHEEL = 21
+    RBIGTOE = 22
+    RSMALLTOE = 23
+    RHEEL = 24
+    BACKGND = 25
 
 
 # Aux functions
@@ -60,37 +94,13 @@ def save_datetime_to_h5(t_arr, h5_handle, field_name):
     h5_handle.create_dataset(field_name, data=[(t-t_arr[0]).total_seconds() for t in t_arr])
     h5_handle.create_dataset(field_name + "_str", data=[str(t).encode('utf8') for t in t_arr])
 
-
-# Aux constants & enums
-DEFAULT_TIMEZONE = pytz.timezone('America/Los_Angeles')
-
-class JointEnum(Enum):
-    NOSE = 0
-    NECK = 1
-    RSHOULDER = 2
-    RELBOW = 3
-    RWRIST = 4
-    LSHOULDER = 5
-    LELBOW = 6
-    LWRIST = 7
-    MIDHIP = 8
-    RHIP = 9
-    RKNEE = 10
-    RANKLE = 11
-    LHIP = 12
-    LKNEE = 13
-    LANKLE = 14
-    REYE = 15
-    LEYE = 16
-    REAR = 17
-    LEAR = 18
-    LBIGTOE = 19
-    LSMALLTOE = 20
-    LHEEL = 21
-    RBIGTOE = 22
-    RSMALLTOE = 23
-    RHEEL = 24
-    BACKGND = 25
+def str_to_datetime(str_dt, tz=DEFAULT_TIMEZONE):
+    # If datetime was localized, it will add timezone info at the end (e.g. -07:00) -> Length will be longer than the default 24 characters
+    if len(str_dt) > 26:
+        return datetime.strptime(str_dt.decode('utf8'), DATETIME_STR_FORMAT+"%z")
+    else:
+        t = datetime.strptime(str_dt.decode('utf8'), DATETIME_STR_FORMAT)
+        return tz.localize(t) if tz is not None else t
 
 
 # Aux helper classes
