@@ -56,6 +56,10 @@ def time_to_float(t_arr, t_ref=None):
     if t_ref is None: t_ref = t_arr[0]
     return [(t-t_ref).total_seconds() for t in t_arr]
 
+def save_datetime_to_h5(t_arr, h5_handle, field_name):
+    h5_handle.create_dataset(field_name, data=[(t-t_arr[0]).total_seconds() for t in t_arr])
+    h5_handle.create_dataset(field_name + "_str", data=[str(t).encode('utf8') for t in t_arr])
+
 
 # Aux constants & enums
 DEFAULT_TIMEZONE = pytz.timezone('America/Los_Angeles')

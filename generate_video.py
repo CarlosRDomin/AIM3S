@@ -1,5 +1,5 @@
 from read_dataset import read_weight_data, read_weights_data
-from aux_tools import format_axis_as_timedelta, _min, _max, str2bool, DEFAULT_TIMEZONE, date_range, time_to_float
+from aux_tools import format_axis_as_timedelta, _min, _max, str2bool, DEFAULT_TIMEZONE, date_range, time_to_float, save_datetime_to_h5
 import cv2
 import numpy as np
 from scipy.interpolate import interp1d
@@ -18,7 +18,79 @@ def plt_fig_to_cv2_img(fig):
     return img
 
 
-def generate_video(experiment_base_folder='Dataset/Characterization/2019-03-31_00-00-02', camera_id=3, weight_id=5309446, do_tare=False, t_lims=5, t_start=0, t_end=-1, weight_plot_scale=0.3, video_fps=25):
+def generate_multicam_video(experiment_base_folder, video_out_filename=None, t_start=0, t_end=-1, video_fps=25, visualize=False):
+    t_experiment_start = experiment_base_folder.rsplit('/', 1)[-1]  # Last folder in the path should indicate time at which experiment started
+    videos_in = []
+    camera_timestamps = []
+    t_latest_start = datetime.min.replace(tzinfo=DEFAULT_TIMEZONE)
+    t_earliest_end = datetime.max.replace(tzinfo=DEFAULT_TIMEZONE)
+    for cam in (range(4)):
+        camera_filename = os.path.join(experiment_base_folder, "cam{}_{}".format(cam+1, t_experiment_start))
+        videos_in.append(cv2.VideoCapture(camera_filename + ".mp4"))
+        camera_info = h5py.File(camera_filename + ".h5", 'r')
+        camera_timestamps.append(np.array([DEFAULT_TIMEZONE.localize(datetime.strptime(t.decode('utf8'), "%Y-%m-%d %H:%M:%S.%f")) for t in camera_info.get("t_str")]))
+        t_latest_start = _max(camera_timestamps[-1][0], t_latest_start)
+        t_earliest_end = _min(camera_timestamps[-1][-1], t_earliest_end)
+
+    # Interpolate time (nearest frame) as if cameras had been sampled at constant fps
+    t_cam = np.array(list(date_range(t_latest_start, t_earliest_end, timedelta(seconds=1/video_fps))))
+    to_float = lambda t_arr: np.array(time_to_float(t_arr, t_latest_start))
+    frame_nums = []
+    for t in camera_timestamps:
+        frame_nums.append(interp1d(to_float(t), range(len(t)), kind='nearest', copy=False, assume_sorted=True)(to_float(t_cam)).astype(np.uint16))
+    frame_nums = np.array(frame_nums)
+
+    # Set up video file
+    if video_out_filename is None:
+        video_out_filename = os.path.join(experiment_base_folder, "multicam_{}.mp4".format(t_experiment_start))
+    video_size = (int(videos_in[0].get(cv2.CAP_PROP_FRAME_WIDTH)), int(videos_in[0].get(cv2.CAP_PROP_FRAME_HEIGHT)))
+    video_out = cv2.VideoWriter(video_out_filename, cv2.VideoWriter_fourcc(*'avc1'), video_fps, video_size)
+    rgb_data = np.zeros((2*video_size[1], 2*video_size[0], 3), dtype=np.uint8)
+    img = np.zeros((video_size[1], video_size[0], 3), dtype=np.uint8)
+
+    # Save timing params so t_cam can be reconstructed (and the weights can be aligned)
+    with h5py.File(os.path.splitext(video_out_filename)[0] + ".h5", 'w') as f_hdf5:
+        f_hdf5.attrs['t_start'] = str(t_cam[0]).encode('utf8')
+        f_hdf5.attrs['t_end'] = str(t_cam[-1]).encode('utf8')
+        f_hdf5.attrs['fps'] = video_fps
+
+    # Generate video
+    for n,t in enumerate(t_cam):
+        curr_t = (t-t_cam[0]).total_seconds()
+        if curr_t < t_start or (t_end > 0 and curr_t > t_end): continue
+
+        for i in range(len(frame_nums)):
+            videos_in[i].set(cv2.CAP_PROP_POS_FRAMES, frame_nums[i,n])
+            ok = videos_in[i].read(img)
+            assert ok, "Couldn't read frame {} from camera {}!".format(n, i+1)
+            if i == 0:
+                rgb_data[:img.shape[0], :img.shape[1], :] = img
+            elif i == 1:
+                rgb_data[img.shape[0]:, :img.shape[1], :] = img
+            elif i == 2:
+                rgb_data[:img.shape[0], img.shape[1]:, :] = img
+            elif i == 3:
+                rgb_data[img.shape[0]:, img.shape[1]:, :] = img
+
+        # Output the image (show it and write to file)
+        cv2.resize(rgb_data, None, img, fx=0.5, fy=0.5)
+        video_out.write(img)
+        print("{} out of {} frames ({:6.2f}%) written!".format(n+1, len(t_cam), 100.0*(n+1)/len(t_cam)))
+
+        if visualize:
+            cv2.imshow("Frame", img)
+            # Let the visualization be stopped by pressing a key
+            k = cv2.waitKey(1)
+            if k > 0:
+                print('Key pressed, exiting!')
+                break
+
+    # Close video file
+    video_out.release()  # Make sure to release the video so it's actually written to disk
+    print("Video successfully saved as '{}'! :)".format(video_out_filename))
+
+
+def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_tare=False, t_lims=5, t_start=0, t_end=-1, weight_plot_scale=0.3, video_fps=25):
     multiple_cams = (camera_id < 0)
     if multiple_cams:
         weight_plot_scale = 1  # Overwrite setting, weight plots will be hstacked (same height)
@@ -120,7 +192,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', "--cam", default=1, type=int, help="ID of the camera to visualize")
     parser.add_argument('-w', "--weight", default=5309446, type=int, help="ID of the weight sensor to visualize")
     parser.add_argument('-t', "--do-tare", default=True, type=str2bool, help="Whether or not to tare the weight scale")
-    parser.add_argument('-l', "--t-lims", default=5, type=float, help="Length (in s) of the weight plot sliding window")
+    parser.add_argument('-l', "--t-lims", default=3, type=float, help="Length (in s) of the weight plot sliding window")
     parser.add_argument('-s', "--t-start", default=0, type=float, help="Experiment time at which to start generating the video")
     parser.add_argument('-e', "--t-end", default=-1, type=float, help="Experiment time at which to stop generating the video (-1 for no limit)")
     parser.add_argument('-k', "--scale", default=0.3, type=float, help="Ratio (0-1) to scale down the weight plot wrt the video's dimensions")

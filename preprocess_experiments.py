@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from read_dataset import read_weight_data
-from aux_tools import str2bool, _min, _max, ensure_folder_exists, list_subfolders, format_axis_as_timedelta, JointEnum
+from aux_tools import str2bool, _min, _max, ensure_folder_exists, list_subfolders, format_axis_as_timedelta, JointEnum, save_datetime_to_h5
 from matplotlib import pyplot as plt
 from datetime import datetime
 from multiprocessing import Pool, cpu_count
@@ -40,7 +40,6 @@ HDF5_POSE_GROUP_NAME = "pose"
 HDF5_HANDS_GROUP_NAME = "hands"
 HDF5_WEIGHT_GROUP_NAME = "weight_{}"
 HDF5_WEIGHT_T_NAME = "t"
-HDF5_WEIGHT_T_STR_NAME = "t_str"
 HDF5_WEIGHT_DATA_NAME = "w"
 BACKGROUND_MASKS_FOLDER_NAME = "background_masks"
 
@@ -57,8 +56,7 @@ def preprocess_weight(parent_folder, do_tare=False, visualize=False):
             weight_group_name = HDF5_WEIGHT_GROUP_NAME.format(weight_id)
             if weight_group_name in f_hdf5: del f_hdf5[weight_group_name]  # OVERWRITE (delete if already existed)
             weight = f_hdf5.create_group(weight_group_name)
-            weight.create_dataset(HDF5_WEIGHT_T_NAME, data=[(t-weight_t[0]).total_seconds() for t in weight_t])
-            weight.create_dataset(HDF5_WEIGHT_T_STR_NAME, data=[str(t).encode('utf8') for t in weight_t])
+            save_datetime_to_h5(weight_t, weight, HDF5_WEIGHT_T_NAME)
             weight.create_dataset(HDF5_WEIGHT_DATA_NAME, data=weight_data)
 
             if visualize:
