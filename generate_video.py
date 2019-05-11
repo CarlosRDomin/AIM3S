@@ -240,6 +240,4 @@ if __name__ == '__main__':
     parser.add_argument('-r', "--fps", default=25, type=int, help="Output video frame rate")
     args = parser.parse_args()
 
-    # generate_multicam_video(args.folder, None, args.t_start, args.t_end, args.fps)
-    # exit()
     generate_video(args.folder, args.cam, args.weight, args.do_tare, args.t_lims, args.t_start, args.t_end, args.scale, args.fps)
