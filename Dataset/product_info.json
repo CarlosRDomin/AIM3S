@@ -1,0 +1,1525 @@
+{
+	"products": [
+		{
+			"id": 1,
+			"name": "Premium napkins",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						2,
+						3
+					]
+				}
+			],
+			"weights": [
+				249.0,
+				222.0
+			]
+		},
+		{
+			"id": 2,
+			"name": "Cuttlery",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						3,
+						4
+					]
+				}
+			],
+			"weights": [
+				104.0,
+				103.0
+			]
+		},
+		{
+			"id": 3,
+			"name": "Heavy Duty Aluminium Foil",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						4,
+						5
+					]
+				}
+			],
+			"weights": [
+				384.0,
+				365.0,
+				383.0,
+				381.0
+			]
+		},
+		{
+			"id": 4,
+			"name": "Reynolds Wrap",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						5,
+						6
+					]
+				}
+			],
+			"weights": [
+				193.0,
+				177.0,
+				180.0
+			]
+		},
+		{
+			"id": 5,
+			"name": "Cling Wrap",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						6,
+						7
+					]
+				}
+			],
+			"weights": [
+				168.0,
+				167.0,
+				169.0,
+				171.0
+			]
+		},
+		{
+			"id": 6,
+			"name": "Sandwiches bag",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						7,
+						8,
+						9
+					]
+				}
+			],
+			"weights": [
+				120.0,
+				125.0,
+				122.0,
+				122.0
+			]
+		},
+		{
+			"id": 7,
+			"name": "Quart Freezer",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						9,
+						10
+					]
+				}
+			],
+			"weights": [
+				140.0,
+				138.0,
+				140.0,
+				148.0
+			]
+		},
+		{
+			"id": 8,
+			"name": "Gallon Freezer",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						10,
+						11
+					]
+				}
+			],
+			"weights": [
+				213.0,
+				201.0,
+				179.0,
+				181.0
+			]
+		},
+		{
+			"id": 9,
+			"name": "Large Drawstring Trash Bags",
+			"arrangement": [
+				{
+					"shelf_id": 2,
+					"plate_ids": [
+						2,
+						3,
+						4,
+						5,
+						6
+					]
+				}
+			],
+			"weights": [
+				401.0,
+				402.0
+			]
+		},
+		{
+			"id": 10,
+			"name": "Flap Tie Lawn & Leaf Bags",
+			"arrangement": [
+				{
+					"shelf_id": 2,
+					"plate_ids": [
+						7,
+						8,
+						9
+					]
+				}
+			],
+			"weights": [
+				458.0,
+				428.0
+			]
+		},
+		{
+			"id": 11,
+			"name": "Tall Kitchen Bags White",
+			"arrangement": [
+				{
+					"shelf_id": 2,
+					"plate_ids": [
+						9,
+						10,
+						11
+					]
+				}
+			],
+			"weights": [
+				457.0,
+				463.0,
+				469.0
+			]
+		},
+		{
+			"id": 12,
+			"name": "Bounty Paper Towels",
+			"arrangement": [
+				{
+					"shelf_id": 3,
+					"plate_ids": [
+						2,
+						3,
+						4
+					]
+				}
+			],
+			"weights": [
+				149.0,
+				156.0
+			]
+		},
+		{
+			"id": 13,
+			"name": "Ultra Premium Paper Towels",
+			"arrangement": [
+				{
+					"shelf_id": 3,
+					"plate_ids": [
+						4,
+						5,
+						6,
+						7
+					]
+				}
+			],
+			"weights": [
+				264.0,
+				266.0,
+				262.0
+			]
+		},
+		{
+			"id": 14,
+			"name": "Premium paper towels",
+			"arrangement": [
+				{
+					"shelf_id": 3,
+					"plate_ids": [
+						7,
+						8,
+						9,
+						10
+					]
+				}
+			],
+			"weights": [
+				204.0,
+				202.0,
+				197.0,
+				201.0
+			]
+		},
+		{
+			"id": 15,
+			"name": "Sanitex Vinyl Gloves",
+			"arrangement": [
+				{
+					"shelf_id": 3,
+					"plate_ids": [
+						10,
+						11
+					]
+				}
+			],
+			"weights": [
+				560.0,
+				571.0
+			]
+		},
+		{
+			"id": 16,
+			"name": "Windex Original",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						2,
+						3
+					]
+				}
+			],
+			"weights": [
+				412.6,
+				405.3
+			]
+		},
+		{
+			"id": 17,
+			"name": "Scotch Brite Spounge",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						3,
+						4,
+						5
+					]
+				}
+			],
+			"weights": [
+				13.3,
+				14.3,
+				18.5
+			]
+		},
+		{
+			"id": 18,
+			"name": "Palmolive Ultra Strenght dish liquid",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						5,
+						6
+					]
+				}
+			],
+			"weights": [
+				326.6,
+				326.8
+			]
+		},
+		{
+			"id": 19,
+			"name": "Dawn dish liquid",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						5,
+						6
+					]
+				}
+			],
+			"weights": [
+				270.8,
+				273.5
+			]
+		},
+		{
+			"id": 20,
+			"name": "7Eleven Dish Liquid ",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						6,
+						7
+					]
+				}
+			],
+			"weights": [
+				456.4,
+				463.4
+			]
+		},
+		{
+			"id": 21,
+			"name": "Fabric Febreeze",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						7,
+						8
+					]
+				}
+			],
+			"weights": [
+				574.0,
+				577.0
+			]
+		},
+		{
+			"id": 22,
+			"name": "Glade Clean linen",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						9
+					]
+				}
+			],
+			"weights": [
+				305.5,
+				306.7
+			]
+		},
+		{
+			"id": 23,
+			"name": "Glade scented Candel",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						10
+					]
+				}
+			],
+			"weights": [
+				344.2,
+				344.2,
+				343.9
+			]
+		},
+		{
+			"id": 24,
+			"name": "Lysol spray",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						11
+					]
+				}
+			],
+			"weights": [
+				286.4,
+				286.5
+			]
+		},
+		{
+			"id": 25,
+			"name": "409 Multi-Surface",
+			"arrangement": [
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						2,
+						3
+					]
+				}
+			],
+			"weights": [
+				1028.0,
+				1028.0
+			]
+		},
+		{
+			"id": 26,
+			"name": "Toilet bowl cleaner",
+			"arrangement": [
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						4
+					]
+				}
+			],
+			"weights": [
+				799.0
+			]
+		},
+		{
+			"id": 27,
+			"name": "Lysol Toilet bleach",
+			"arrangement": [
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						4,
+						5
+					]
+				}
+			],
+			"weights": [
+				775.0,
+				778.0
+			]
+		},
+		{
+			"id": 28,
+			"name": "7E Glass Cleaner",
+			"arrangement": [
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						5,
+						6
+					]
+				}
+			],
+			"weights": [
+				1018.0,
+				1030.0
+			]
+		},
+		{
+			"id": 29,
+			"name": "Liquid Plumr",
+			"arrangement": [
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						7,
+						8
+					]
+				}
+			],
+			"weights": [
+				1116.0,
+				1131.0
+			]
+		},
+		{
+			"id": 30,
+			"name": "Lysol all purpose cleaner Lemon",
+			"arrangement": [
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						7,
+						8
+					]
+				}
+			],
+			"weights": [
+				1043.0,
+				1036.0
+			]
+		},
+		{
+			"id": 31,
+			"name": "Fabuloso Cleaner",
+			"arrangement": [
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						9
+					]
+				}
+			],
+			"weights": [
+				685.0,
+				684.0
+			]
+		},
+		{
+			"id": 32,
+			"name": "Raid (ANt & Roach remover)",
+			"arrangement": [
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						9,
+						10
+					]
+				}
+			],
+			"weights": [
+				438.7,
+				439.9
+			]
+		},
+		{
+			"id": 33,
+			"name": "Pine-sol Multi-surfaces",
+			"arrangement": [
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						10,
+						11
+					]
+				}
+			],
+			"weights": [
+				766.0,
+				767.0
+			]
+		},
+		{
+			"id": 34,
+			"name": "Skor",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						2,
+						3
+					]
+				}
+			],
+			"weights": [
+				38.3,
+				41.9,
+				41.6,
+				40.8
+			]
+		},
+		{
+			"id": 35,
+			"name": "Reese's Pieces",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						10,
+						9
+					]
+				}
+			],
+			"weights": []
+		},
+		{
+			"id": 36,
+			"name": "Whatchamacallit",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						6,
+						7
+					]
+				}
+			],
+			"weights": [
+				49.1,
+				49.2,
+				48.7,
+				48.4,
+				48.5
+			]
+		},
+		{
+			"id": 37,
+			"name": "Reese's Outrageous Pieces",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						7,
+						8,
+						9
+					]
+				}
+			],
+			"weights": [
+				44.8,
+				41.6,
+				45.3,
+				46.2,
+				47.6,
+				45.1
+			]
+		},
+		{
+			"id": 38,
+			"name": "Cadbury Caramello ",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						4,
+						5,
+						6
+					]
+				}
+			],
+			"weights": [
+				47.5,
+				47.8,
+				47.7,
+				47.6
+			]
+		},
+		{
+			"id": 39,
+			"name": "Reese's Fast Break ",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						11,
+						12
+					]
+				}
+			],
+			"weights": [
+				53.2,
+				56.4,
+				54.3,
+				52.0,
+				51.8,
+				52.2,
+				51.9
+			]
+		},
+		{
+			"id": 40,
+			"name": "Rolo",
+			"arrangement": [
+				{
+					"shelf_id": 1,
+					"plate_ids": [
+						3,
+						4
+					]
+				}
+			],
+			"weights": [
+				49.6,
+				49.6,
+				49.9,
+				49.7
+			]
+		},
+		{
+			"id": 41,
+			"name": "PayDay",
+			"arrangement": [
+				{
+					"shelf_id": 2,
+					"plate_ids": [
+						6,
+						7,
+						8
+					]
+				}
+			],
+			"weights": [
+				52.2,
+				53.7,
+				61.7
+			]
+		},
+		{
+			"id": 42,
+			"name": "Reese's Nutrageous",
+			"arrangement": [
+				{
+					"shelf_id": 2,
+					"plate_ids": [
+						9,
+						10
+					]
+				}
+			],
+			"weights": [
+				46.2,
+				52.8,
+				52.1
+			]
+		},
+		{
+			"id": 43,
+			"name": "Green Crispy M&M's",
+			"arrangement": [
+				{
+					"shelf_id": 2,
+					"plate_ids": [
+						2,
+						3
+					]
+				}
+			],
+			"weights": [
+				39.4,
+				41.5,
+				42.8,
+				41.3,
+				41.2
+			]
+		},
+		{
+			"id": 44,
+			"name": "Snickers Hazelnut",
+			"arrangement": [
+				{
+					"shelf_id": 2,
+					"plate_ids": [
+						4,
+						5
+					]
+				}
+			],
+			"weights": [
+				51.4,
+				53.5
+			]
+		},
+		{
+			"id": 45,
+			"name": "Snickers Almond ",
+			"arrangement": [
+				{
+					"shelf_id": 2,
+					"plate_ids": [
+						5,
+						6
+					]
+				}
+			],
+			"weights": [
+				51.7,
+				52.5,
+				53.8
+			]
+		},
+		{
+			"id": 46,
+			"name": "Snickers Peanut Butter Squared",
+			"arrangement": [
+				{
+					"shelf_id": 2,
+					"plate_ids": [
+						3,
+						4
+					]
+				}
+			],
+			"weights": [
+				52.6,
+				50.9,
+				52.2,
+				52.1
+			]
+		},
+		{
+			"id": 47,
+			"name": "Reece's White Cream",
+			"arrangement": [
+				{
+					"shelf_id": 2,
+					"plate_ids": [
+						8,
+						9
+					]
+				}
+			],
+			"weights": [
+				46.5,
+				47.2,
+				47.5,
+				47.4
+			]
+		},
+		{
+			"id": 48,
+			"name": "Reece's Sticks",
+			"arrangement": [
+				{
+					"shelf_id": 2,
+					"plate_ids": [
+						11,
+						12
+					]
+				}
+			],
+			"weights": [
+				45.8,
+				41.8,
+				44.0,
+				45.2
+			]
+		},
+		{
+			"id": 49,
+			"name": "Twix Dark",
+			"arrangement": [
+				{
+					"shelf_id": 3,
+					"plate_ids": [
+						8,
+						9
+					]
+				}
+			],
+			"weights": [
+				55.2,
+				54.4
+			]
+		},
+		{
+			"id": 50,
+			"name": "Blue M&M's Caramel",
+			"arrangement": [
+				{
+					"shelf_id": 3,
+					"plate_ids": [
+						5,
+						6
+					]
+				}
+			],
+			"weights": [
+				43.1,
+				47.1,
+				39.7,
+				41.0
+			]
+		},
+		{
+			"id": 51,
+			"name": "Snickers",
+			"arrangement": [
+				{
+					"shelf_id": 3,
+					"plate_ids": [
+						6,
+						7
+					]
+				}
+			],
+			"weights": [
+				53.8,
+				52.8,
+				53.4,
+				53.1
+			]
+		},
+		{
+			"id": 52,
+			"name": "2 Peanut Butter Cups Milk Chocolate Reese's",
+			"arrangement": [
+				{
+					"shelf_id": 3,
+					"plate_ids": [
+						9,
+						10
+					]
+				}
+			],
+			"weights": [
+				45.4,
+				45.3,
+				45.0,
+				45.7,
+				45.2
+			]
+		},
+		{
+			"id": 53,
+			"name": "White Chocolate M&M's",
+			"arrangement": [
+				{
+					"shelf_id": 3,
+					"plate_ids": [
+						3,
+						4,
+						5
+					]
+				}
+			],
+			"weights": [
+				46.4,
+				45.1,
+				43.8,
+				46.7
+			]
+		},
+		{
+			"id": 54,
+			"name": "Peanut M&M's",
+			"arrangement": [
+				{
+					"shelf_id": 3,
+					"plate_ids": [
+						2,
+						3
+					]
+				}
+			],
+			"weights": [
+				53.5,
+				53.4,
+				53.7,
+				53.5
+			]
+		},
+		{
+			"id": 55,
+			"name": "Butterfinger 2 piece",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						4,
+						5,
+						6
+					]
+				}
+			],
+			"weights": [
+				109.7,
+				105.6,
+				109.9,
+				110.4,
+				105.5
+			]
+		},
+		{
+			"id": 56,
+			"name": "4 Butterfinger Peanut Butter Cups",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						2,
+						3,
+						4
+					]
+				}
+			],
+			"weights": [
+				90.2,
+				91.5,
+				93.2,
+				91.1,
+				90.7,
+				90.1,
+				92.0,
+				90.8
+			]
+		},
+		{
+			"id": 57,
+			"name": "Whatchamacallit King Size",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						6,
+						7,
+						8
+					]
+				}
+			],
+			"weights": [
+				75.6,
+				79.1,
+				79.5,
+				74.6
+			]
+		},
+		{
+			"id": 58,
+			"name": "Reese's Nutrageous King Size",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						8,
+						9
+					]
+				},
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						5,
+						6,
+						7
+					]
+				}
+			],
+			"weights": [
+				90.8,
+				91.4,
+				97.0,
+				95.5,
+				89.8,
+				89.4,
+				92.6,
+				85.1,
+				90.7
+			]
+		},
+		{
+			"id": 59,
+			"name": "Reece's Pieces King Size",
+			"arrangement": [
+				{
+					"shelf_id": 4,
+					"plate_ids": [
+						9,
+						10,
+						11
+					]
+				}
+			],
+			"weights": [
+				87.5,
+				88.0,
+				88.7,
+				87.4,
+				88.1,
+				88.8,
+				87.4
+			]
+		},
+		{
+			"id": 60,
+			"name": "Reese's Big Cup Crunchy",
+			"arrangement": [
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						7,
+						8
+					]
+				}
+			],
+			"weights": [
+				83.7,
+				85.9,
+				83.3,
+				85.5,
+				83.7,
+				84.2
+			]
+		},
+		{
+			"id": 61,
+			"name": "Cadbury Caramello King Size",
+			"arrangement": [
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						4,
+						5
+					]
+				}
+			],
+			"weights": [
+				76.8,
+				76.9,
+				76.8,
+				76.9
+			]
+		},
+		{
+			"id": 62,
+			"name": "4 Snickers Real Peanut Butter",
+			"arrangement": [
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						2,
+						3
+					]
+				}
+			],
+			"weights": [
+				106.2,
+				108.1
+			]
+		},
+		{
+			"id": 63,
+			"name": "Reese's Fast Break King Size",
+			"arrangement": [
+				{
+					"shelf_id": 5,
+					"plate_ids": [
+						9,
+						10
+					]
+				}
+			],
+			"weights": [
+				102.4,
+				104.7,
+				100.8,
+				103.4
+			]
+		},
+		{
+			"id": 64,
+			"name": "4 Creamy Snickers Almond Butter",
+			"arrangement": [
+				{
+					"shelf_id": 6,
+					"plate_ids": [
+						3,
+						4
+					]
+				}
+			],
+			"weights": [
+				87.8,
+				89.2,
+				86.4,
+				86.4
+			]
+		},
+		{
+			"id": 65,
+			"name": "4 Creamy Snickers Peanut Butter",
+			"arrangement": [
+				{
+					"shelf_id": 6,
+					"plate_ids": [
+						1,
+						2,
+						3
+					]
+				}
+			],
+			"weights": [
+				84.1,
+				83.6,
+				84.4,
+				63.5,
+				83.5,
+				84.4,
+				84.1
+			]
+		},
+		{
+			"id": 66,
+			"name": "White Creme Reese's King Size",
+			"arrangement": [
+				{
+					"shelf_id": 6,
+					"plate_ids": [
+						6,
+						7,
+						8
+					]
+				}
+			],
+			"weights": [
+				85.2,
+				85.6,
+				85.2,
+				85.1,
+				80.9,
+				86.0,
+				85.7
+			]
+		},
+		{
+			"id": 67,
+			"name": "Snickers Xtreme",
+			"arrangement": [
+				{
+					"shelf_id": 6,
+					"plate_ids": [
+						5,
+						6
+					]
+				}
+			],
+			"weights": [
+				109.4,
+				102.9,
+				101.9,
+				107.7
+			]
+		},
+		{
+			"id": 68,
+			"name": "Reese's Pieces Big Cup King Size",
+			"arrangement": [
+				{
+					"shelf_id": 6,
+					"plate_ids": [
+						10,
+						11,
+						12
+					]
+				}
+			],
+			"weights": [
+				85.9,
+				84.1,
+				84.7
+			]
+		},
+		{
+			"id": 69,
+			"name": "Reese's Crispy Crunchy King Size",
+			"arrangement": [
+				{
+					"shelf_id": 6,
+					"plate_ids": [
+						8,
+						9,
+						10
+					]
+				}
+			],
+			"weights": [
+				94.0,
+				90.4,
+				94.7,
+				92.6
+			]
+		},
+		{
+			"id": 70,
+			"name": "2 Snickers Almond",
+			"arrangement": [
+				{
+					"shelf_id": 7,
+					"plate_ids": [
+						4,
+						5
+					]
+				}
+			],
+			"weights": [
+				91.9,
+				95.1,
+				94.0,
+				92.9,
+				93.0
+			]
+		},
+		{
+			"id": 71,
+			"name": "Kit Kat Big Kat King Size",
+			"arrangement": [
+				{
+					"shelf_id": 7,
+					"plate_ids": [
+						5,
+						6
+					]
+				}
+			],
+			"weights": [
+				88.1,
+				89.3,
+				90.2,
+				87.3,
+				85.5,
+				88.6
+			]
+		},
+		{
+			"id": 72,
+			"name": "2 Reese's Big Cup King Size",
+			"arrangement": [
+				{
+					"shelf_id": 7,
+					"plate_ids": [
+						8,
+						9
+					]
+				}
+			],
+			"weights": [
+				83.7,
+				81.9,
+				82.5,
+				83.9
+			]
+		},
+		{
+			"id": 73,
+			"name": "Peanut Butter M&M's Share Size",
+			"arrangement": [
+				{
+					"shelf_id": 7,
+					"plate_ids": [
+						2,
+						3
+					]
+				}
+			],
+			"weights": [
+				83.0,
+				84.1,
+				83.4,
+				86.2
+			]
+		},
+		{
+			"id": 74,
+			"name": "Snickers Bites",
+			"arrangement": [
+				{
+					"shelf_id": 7,
+					"plate_ids": [
+						9,
+						10
+					]
+				}
+			],
+			"weights": [
+				82.3,
+				87.8,
+				82.6,
+				92.3
+			]
+		},
+		{
+			"id": 75,
+			"name": "Reese's Minis King Size",
+			"arrangement": [
+				{
+					"shelf_id": 7,
+					"plate_ids": [
+						7,
+						8
+					]
+				}
+			],
+			"weights": [
+				74.6,
+				74.5,
+				74.6,
+				74.0
+			]
+		},
+		{
+			"id": 76,
+			"name": "Kit Kat King Size",
+			"arrangement": [
+				{
+					"shelf_id": 8,
+					"plate_ids": [
+						2,
+						3
+					]
+				}
+			],
+			"weights": [
+				90.8,
+				86.8,
+				89.6,
+				89.9
+			]
+		},
+		{
+			"id": 77,
+			"name": "2 Snickers White",
+			"arrangement": [
+				{
+					"shelf_id": 8,
+					"plate_ids": [
+						7,
+						8,
+						9
+					]
+				}
+			],
+			"weights": [
+				84.3,
+				83.6,
+				84.6,
+				83.5,
+				81.7
+			]
+		},
+		{
+			"id": 78,
+			"name": "Kit Kat White King Size",
+			"arrangement": [
+				{
+					"shelf_id": 8,
+					"plate_ids": [
+						3,
+						4,
+						5
+					]
+				}
+			],
+			"weights": [
+				88.3,
+				82.8,
+				84.9,
+				89.1,
+				86.1,
+				88.4
+			]
+		},
+		{
+			"id": 79,
+			"name": "2 Snickers",
+			"arrangement": [
+				{
+					"shelf_id": 8,
+					"plate_ids": [
+						5,
+						6
+					]
+				}
+			],
+			"weights": [
+				95.5,
+				95.0,
+				92.7,
+				95.0
+			]
+		},
+		{
+			"id": 80,
+			"name": "4 peanut butter cup Reese's King Size",
+			"arrangement": [
+				{
+					"shelf_id": 8,
+					"plate_ids": [
+						9,
+						10,
+						11
+					]
+				}
+			],
+			"weights": [
+				85.7,
+				84.0,
+				85.2,
+				85.4,
+				86.1
+			]
+		}
+	]
+}
