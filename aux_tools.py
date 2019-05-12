@@ -100,7 +100,10 @@ def str_to_datetime(str_dt, tz=DEFAULT_TIMEZONE):
     if len(str_dt) > 26:
         return datetime.strptime(str_dt.decode('utf8'), DATETIME_STR_FORMAT+"%z")
     else:
-        t = datetime.strptime(str_dt.decode('utf8'), DATETIME_STR_FORMAT)
+        try:
+            t = datetime.strptime(str_dt.decode('utf8'), DATETIME_STR_FORMAT)
+        except:
+            t = datetime.strptime(str_dt.decode('utf8'), DATETIME_STR_FORMAT[:-3])  # Remove fraction (.%f) in case ms were 000000
         return tz.localize(t) if tz is not None else t
 
 
