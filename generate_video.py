@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 from preprocess_experiments import HDF5_WEIGHT_GROUP_NAME
 from aux_tools import format_axis_as_timedelta, _min, _max, str2bool, list_subfolders, DEFAULT_TIMEZONE, date_range, time_to_float, str_to_datetime
 import cv2
