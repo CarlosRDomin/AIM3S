@@ -100,7 +100,7 @@ def generate_multicam_video(experiment_base_folder, video_out_filename=None, t_s
     return video_out_filename
 
 
-def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_tare=False, t_lims=5, t_start=0, t_end=-1, weight_plot_scale=0.3, video_fps=25, visualize=True, save_video=False, out_scale=0.5):
+def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_tare=False, t_lims=3, t_start=0, t_end=-1, weight_plot_scale=0.3, video_fps=25, visualize=True, save_video=False, cb_event_start_or_end=None, out_scale=0.5):
     multiple_cams = (camera_id < 0)
     if multiple_cams:
         weight_plot_scale = 1  # Overwrite setting, weight plots will be hstacked (same height)
@@ -215,9 +215,13 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
                 weight_to_cam_t_offset -= TIME_INCREMENT
             elif k == ord('s'):
                 weight_to_cam_t_offset += TIME_INCREMENT
+            elif k == ord('b') and cb_event_start_or_end is not None:
+                cb_event_start_or_end(True, t_cam[n])
+            elif k == ord('n') and cb_event_start_or_end is not None:
+                cb_event_start_or_end(False, t_cam[n])
             elif k == ord(' '):
                 is_paused = not is_paused
-            elif k > 0:
+            elif k == 27 or (k > 0 and cb_event_start_or_end is None):  # Don't exit on unrecognized keys if labeling ground truth
                 print('Key pressed, exiting!')
                 cv2.destroyWindow("Frame")
                 cv2.waitKey(1)
