@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from read_dataset import read_weight_data
+from read_dataset import read_weights_data
 from aux_tools import str2bool, _min, _max, ensure_folder_exists, list_subfolders, format_axis_as_timedelta, JointEnum, save_datetime_to_h5
 from matplotlib import pyplot as plt
 from datetime import datetime
@@ -49,15 +49,17 @@ def preprocess_weight(parent_folder, do_tare=False, visualize=False):
     t_start = os.path.basename(parent_folder)
 
     with h5py.File(os.path.join(parent_folder, "weights_{}.h5".format(t_start)), 'w') as f_hdf5:
-        for sensor_folder in glob.glob(os.path.join(parent_folder, "sensors_*")):
-            weight_t, weight_data, weight_id = read_weight_data(sensor_folder, do_tare=do_tare)
+        weight_t, weight_data, weights_orig = read_weights_data(parent_folder, do_tare=do_tare)
+        save_datetime_to_h5(weight_t, f_hdf5, HDF5_WEIGHT_T_NAME)
+        f_hdf5.create_dataset("w", data=weight_data)
 
-            # Save to h5 file
+        # Save original weight info as well, just in case
+        for weight_id, weight_info in weights_orig.items():
             weight_group_name = HDF5_WEIGHT_GROUP_NAME.format(weight_id)
             if weight_group_name in f_hdf5: del f_hdf5[weight_group_name]  # OVERWRITE (delete if already existed)
             weight = f_hdf5.create_group(weight_group_name)
-            save_datetime_to_h5(weight_t, weight, HDF5_WEIGHT_T_NAME)
-            weight.create_dataset(HDF5_WEIGHT_DATA_NAME, data=weight_data)
+            save_datetime_to_h5(weight_info['t'], weight, HDF5_WEIGHT_T_NAME)
+            weight.create_dataset(HDF5_WEIGHT_DATA_NAME, data=weight_info['w'])
 
             if visualize:
                 fig = plt.figure(figsize=(4, 2))

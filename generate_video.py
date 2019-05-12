@@ -1,4 +1,4 @@
-from read_dataset import read_weight_data, read_weights_data
+from preprocess_experiments import HDF5_WEIGHT_GROUP_NAME
 from aux_tools import format_axis_as_timedelta, _min, _max, str2bool, list_subfolders, DEFAULT_TIMEZONE, date_range, time_to_float, str_to_datetime
 import cv2
 import numpy as np
@@ -106,8 +106,8 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
         weight_plot_scale = 1.0  # Overwrite setting, weight plots will be hstacked (same height)
         video_in_filename = generate_multicam_video(experiment_base_folder, t_start=t_start, t_end=t_end, video_fps=video_fps)
         video_in = cv2.VideoCapture(video_in_filename)
-        with h5py.File(os.path.splitext(video_in_filename)[0] + ".h5", 'r') as f_hdf5:
-            t_cam = np.array(list(date_range(str_to_datetime(f_hdf5.attrs['t_start']), str_to_datetime(f_hdf5.attrs['t_end']), timedelta(seconds=1.0/f_hdf5.attrs['fps']))))
+        with h5py.File(os.path.splitext(video_in_filename)[0] + ".h5", 'r') as h5_cam:
+            t_cam = np.array(list(date_range(str_to_datetime(h5_cam.attrs['t_start']), str_to_datetime(h5_cam.attrs['t_end']), timedelta(seconds=1.0/h5_cam.attrs['fps']))))
     else:
         t_experiment_start = experiment_base_folder.rsplit('/', 1)[-1]  # Last folder in the path should indicate time at which experiment started
         camera_filename = os.path.join(experiment_base_folder, "cam{}_{}".format(camera_id, t_experiment_start))
@@ -119,13 +119,18 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
     rgb_data = np.zeros((video_in_height, video_in_width, 3), dtype=np.uint8)
 
     # Read all weight sensors for the full experiment duration at once
-    multiple_weights = (weight_id < 0)
-    if multiple_weights:
-        weight_t, weight_data, _ = read_weights_data(experiment_base_folder)
-        w = np.sum(weight_data, axis=1)
-    else:
-        weight_t, weight_data, _ = read_weight_data(os.path.join(experiment_base_folder, 'sensors_{}'.format(weight_id)), do_tare=do_tare)
-        w = [weight_data]
+    t_experiment_start = experiment_base_folder.rsplit('/', 1)[-1]  # Last folder in the path should indicate time at which experiment started
+    with h5py.File(os.path.join(experiment_base_folder, "weights_{}.h5".format(t_experiment_start)), 'r') as h5_weights:
+        multiple_weights = (weight_id < 0)
+        if multiple_weights:
+            weight_t = np.array([str_to_datetime(t) for t in h5_weights['t_str']])
+            weight_data = h5_weights['w'][:]
+            w = np.sum(weight_data, axis=1)
+        else:
+            plate_info = h5_weights[HDF5_WEIGHT_GROUP_NAME.format(weight_id)]
+            weight_t = np.array([str_to_datetime(t) for t in plate_info['t_str']])
+            weight_data = plate_info['w'][:]
+            w = [weight_data]
     t_w = time_to_float(weight_t, weight_t[0])
 
     # Manually align weight and cam timestamps (not synced for some reason)
