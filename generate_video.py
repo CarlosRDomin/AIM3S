@@ -26,6 +26,10 @@ def generate_multicam_video(experiment_base_folder, video_out_filename=None, t_s
         print("Video {} already exists, {}".format(video_out_filename, "overwriting..." if overwrite else "nothing to do!"))
         if not overwrite:  # Exit if don't want to overwrite
             return video_out_filename
+    else:
+        print("Generating multi-cam video '{}'".format(video_out_filename))
+
+    # Load videos and get their frame timestamps
     videos_in = []
     camera_timestamps = []
     t_latest_start = datetime.min.replace(tzinfo=DEFAULT_TIMEZONE)
@@ -39,7 +43,7 @@ def generate_multicam_video(experiment_base_folder, video_out_filename=None, t_s
         t_earliest_end = _min(camera_timestamps[-1][-1], t_earliest_end)
 
     # Interpolate time (nearest frame) as if cameras had been sampled at constant fps
-    t_cam = np.array(list(date_range(t_latest_start, t_earliest_end, timedelta(seconds=1/video_fps))))
+    t_cam = np.array(list(date_range(t_latest_start, t_earliest_end, timedelta(seconds=1.0/video_fps))))
     to_float = lambda t_arr: np.array(time_to_float(t_arr, t_latest_start))
     frame_nums = []
     for t in camera_timestamps:
@@ -80,7 +84,7 @@ def generate_multicam_video(experiment_base_folder, video_out_filename=None, t_s
         # Output the image (show it and write to file)
         cv2.resize(rgb_data, None, img, fx=0.5, fy=0.5)
         video_out.write(img)
-        print("{} out of {} frames ({:6.2f}%) written!".format(n+1, len(t_cam), 100.0*(n+1)/len(t_cam)))
+        print("{} out of {} frames ({:6.2f}%) written! ({})".format(n+1, len(t_cam), 100.0*(n+1)/len(t_cam), video_out_filename))
 
         if visualize:
             cv2.imshow("Frame", img)
@@ -131,13 +135,14 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
     fig = plt.figure(figsize=(3.5,5) if multiple_cams else (4,2))
     num_axes = len(weight_data) if multiple_weights else 1
     ax = fig.subplots(num_axes, 1, sharex=True, squeeze=False)
+    curr_t_lines = []
     for i in range(num_axes):
         shelf_i = num_axes - (i+1)  # Shelf 1 is at the bottom
         ax[i,0].plot(t_w, w[shelf_i])
         ax[i,0].set_title('Shelf {}'.format(shelf_i+1) if multiple_weights else 'Load cell #{}'.format(weight_id))
         ax[i,0].set_ylabel('Weight (g)')
         format_axis_as_timedelta(ax[i,0].xaxis)
-    curr_t_line = ax[-1,0].axvline(0, linestyle='--', color='black', linewidth=1)
+        curr_t_lines.append(ax[i,0].axvline(0, linestyle='--', color='black', linewidth=1))
     # Render the figure once to get its dimensions
     fig.canvas.draw()
     weight_img = plt_fig_to_cv2_img(fig)
@@ -156,7 +161,6 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
     FRAME_INCREMENT = 10  # How many frames to skip forward/backward on keyboard input (ASDW)
     LEFT_RIGHT_MULTIPLIER = 10  # How much larger the skip is when using left-right (A-D) vs up-down (or W-S)
     n = -1  # Frame number
-    curr_t = 0
     is_paused = False
     do_skip_frames = False
     while n < len(t_cam):
@@ -171,7 +175,7 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
         ax[-1,0].set_xlim(curr_t-t_lims, curr_t+t_lims)
 
         # Update weight plot and convert to image
-        curr_t_line.set_xdata(curr_t)
+        for l in curr_t_lines: l.set_xdata(curr_t)
         fig.canvas.draw()
         weight_img = plt_fig_to_cv2_img(fig)
 
@@ -229,7 +233,7 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("folder", default="Dataset/Characterization", help="Folder containing the experiment to visualize")
+    parser.add_argument("folder", default="Dataset/Evaluation", help="Folder containing the experiment to visualize")
     parser.add_argument('-c', "--cam", default=1, type=int, help="ID of the camera to visualize")
     parser.add_argument('-w', "--weight", default=5309446, type=int, help="ID of the weight sensor to visualize")
     parser.add_argument('-t', "--do-tare", default=True, type=str2bool, help="Whether or not to tare the weight scale")
@@ -238,8 +242,22 @@ if __name__ == '__main__':
     parser.add_argument('-e', "--t-end", default=-1, type=float, help="Experiment time at which to stop generating the video (-1 for no limit)")
     parser.add_argument('-k', "--scale", default=0.3, type=float, help="Ratio (0-1) to scale down the weight plot wrt the video's dimensions")
     parser.add_argument('-r', "--fps", default=25, type=int, help="Output video frame rate")
+    parser.add_argument("--multi-cam", default=False, action="store_true", help="Add this flag to generate multi-cam videos")
     args = parser.parse_args()
 
-    # generate_multicam_video(args.folder, None, args.t_start, args.t_end, args.fps)
-    # exit()
-    generate_video(args.folder, args.cam, args.weight, args.do_tare, args.t_lims, args.t_start, args.t_end, args.scale, args.fps)
+    if args.multi_cam:
+        from multiprocessing import Pool, cpu_count
+        pool = Pool(processes=cpu_count() if True else 4)
+        tasks_state = []
+
+        folder_names = sorted(next(os.walk(args.folder))[1])  # next(os.walk('')) returns (folder_name, subfolders, files)
+        for experiment_folder in folder_names:
+            task_state = pool.apply_async(generate_multicam_video, (os.path.join(args.folder, experiment_folder),), {'video_fps': args.fps, 'overwrite': False})
+            tasks_state.append(task_state)
+
+        for i,task_state in enumerate(tasks_state):
+            task_state.wait()
+            if not task_state.successful():
+                print("Uh oh... Task {}: {}".format(i+1, task_state._value))
+    else:
+        generate_video(args.folder, args.cam, args.weight, args.do_tare, args.t_lims, args.t_start, args.t_end, args.scale, args.fps)
