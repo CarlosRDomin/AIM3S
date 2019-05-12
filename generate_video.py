@@ -103,11 +103,11 @@ def generate_multicam_video(experiment_base_folder, video_out_filename=None, t_s
 def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_tare=False, t_lims=3, t_start=0, t_end=-1, weight_plot_scale=0.3, video_fps=25, visualize=True, save_video=False, cb_event_start_or_end=None, out_scale=0.5):
     multiple_cams = (camera_id < 0)
     if multiple_cams:
-        weight_plot_scale = 1  # Overwrite setting, weight plots will be hstacked (same height)
+        weight_plot_scale = 1.0  # Overwrite setting, weight plots will be hstacked (same height)
         video_in_filename = generate_multicam_video(experiment_base_folder, t_start=t_start, t_end=t_end, video_fps=video_fps)
         video_in = cv2.VideoCapture(video_in_filename)
         with h5py.File(os.path.splitext(video_in_filename)[0] + ".h5", 'r') as f_hdf5:
-            t_cam = np.array(list(date_range(str_to_datetime(f_hdf5.attrs['t_start']), str_to_datetime(f_hdf5.attrs['t_end']), timedelta(seconds=1/f_hdf5.attrs['fps']))))
+            t_cam = np.array(list(date_range(str_to_datetime(f_hdf5.attrs['t_start']), str_to_datetime(f_hdf5.attrs['t_end']), timedelta(seconds=1.0/f_hdf5.attrs['fps']))))
     else:
         t_experiment_start = experiment_base_folder.rsplit('/', 1)[-1]  # Last folder in the path should indicate time at which experiment started
         camera_filename = os.path.join(experiment_base_folder, "cam{}_{}".format(camera_id, t_experiment_start))

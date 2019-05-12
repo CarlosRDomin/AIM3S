@@ -113,9 +113,11 @@ def read_weights_data(experiment_folder, calib_file="", F_samp=60, *args, **kwar
         # Keep track of how many plates each shelf has
         shelf_id = weight_calib[plate_id]['shelf_id']
         shelves[shelf_id] = _max(weight_calib[plate_id]['plate_num'], shelves.get(shelf_id, 0))
+    if len(shelves) == 0:
+        raise IOError("No weight data found!")
 
     # Resample the whole fixture as if it had been sampled at fixed F_samp
-    t = np.array(list(date_range(t_latest_start, t_earliest_end, timedelta(seconds=1/F_samp))))
+    t = np.array(list(date_range(t_latest_start, t_earliest_end, timedelta(seconds=1.0/F_samp))))
     w = np.zeros((len(shelves), max(shelves.values()), len(t)), dtype=np.float32)
     to_float = lambda t_arr: np.array(time_to_float(t_arr, t_latest_start))
     for plate_id, weight in weights.items():

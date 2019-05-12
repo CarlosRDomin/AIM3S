@@ -4,7 +4,7 @@ import argparse
 import pytz
 import os
 from enum import Enum
-from datetime import datetime
+from dateutil import parser as dateparser
 
 # Python 2-3 compatibility
 import sys
@@ -82,6 +82,9 @@ def get_nonempty_input(msg):
     return out
 
 def date_range(t_start, t_end, t_delta):
+    if t_delta.total_seconds() == 0:
+        raise Exception("Infinite loop!! t_delta can't be 0 (are you dividing two ints?)")
+
     t = t_start
     while t < t_end:
         yield t
@@ -96,15 +99,8 @@ def save_datetime_to_h5(t_arr, h5_handle, field_name):
     h5_handle.create_dataset(field_name + "_str", data=[str(t).encode('utf8') for t in t_arr])
 
 def str_to_datetime(str_dt, tz=DEFAULT_TIMEZONE):
-    # If datetime was localized, it will add timezone info at the end (e.g. -07:00) -> Length will be longer than the default 24 characters
-    if len(str_dt) > 26:
-        return datetime.strptime(str_dt.decode('utf8'), DATETIME_STR_FORMAT+"%z")
-    else:
-        try:
-            t = datetime.strptime(str_dt.decode('utf8'), DATETIME_STR_FORMAT)
-        except:
-            t = datetime.strptime(str_dt.decode('utf8'), DATETIME_STR_FORMAT[:-3])  # Remove fraction (.%f) in case ms were 000000
-        return tz.localize(t) if tz is not None else t
+    t = dateparser.parse(str_dt.decode('utf8'))
+    return tz.localize(t) if tz is not None and t.tzinfo is None else t
 
 
 # Aux helper classes

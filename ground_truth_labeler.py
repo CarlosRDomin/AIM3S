@@ -13,7 +13,8 @@ class GroundTruthLabelerWindow:
     def __init__(self, pipe):
         self.pipe = pipe
         self.done = Event()
-        self.t_pipe = Thread(target=self.handle_pipe, daemon=False)
+        self.t_pipe = Thread(target=self.handle_pipe)
+        self.t_pipe.setDaemon(False)
         self.t_pipe.start()
 
         # Load product info
@@ -21,6 +22,7 @@ class GroundTruthLabelerWindow:
             self.product_info = json.load(f)['products']
         options = tuple((p['id'], p['name']) for p in self.product_info)
         column_headers = ("Time start", "Time end", "Pickup?", "Item ID", "Item name", "Quantity")
+        column_widths = (186, 186, 50, 48, -1, 55)
 
         # Import UI
         try:
@@ -39,7 +41,7 @@ class GroundTruthLabelerWindow:
         # Setup ui
         self.ui = tk.Tk()
         self.ui.title("Ground truth labeler")
-        self.ui.geometry("800x300")
+        self.ui.geometry("850x300")
         self.ui.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.ui_container = ttk.Frame(self.ui)
         self.ui_container.pack(fill='both', expand=True, padx=10, pady=10, ipadx=20)
@@ -54,6 +56,9 @@ class GroundTruthLabelerWindow:
 
         # Widgets
         self.lst_events = MultiColumnListbox(column_headers, master=self.ui)
+        for i,w in enumerate(column_widths):
+            if w > 0:
+                self.lst_events.tree.column(i, width=w, stretch=False)
         self.lst_events.tree.grid(column=0, columnspan=6, row=0, sticky='nesw', in_=self.ui_container)
         num_quantity = tk.Spinbox(self.ui, from_=1, to_=5, width=2, textvariable=self.quantity)
         num_quantity.grid(column=0, row=1, rowspan=2, in_=self.ui_container)
@@ -115,7 +120,8 @@ class GroundTruthLabelerWindow:
             self.ui.destroy()
 
     def add_event(self):
-        new_item = (self.t_start, self.t_end, self.is_pickup.get(), *self.selected_product.get(), self.quantity.get())
+        prod_id, prod_name = self.selected_product.get()
+        new_item = (self.t_start, self.t_end, self.is_pickup.get(), prod_id, prod_name, self.quantity.get())
         print("Adding event: {}".format(new_item))
         self.lst_events.add_item(new_item)
 
