@@ -1,5 +1,5 @@
 from read_dataset import read_weight_data, read_weights_data
-from aux_tools import format_axis_as_timedelta, _min, _max, str2bool, DEFAULT_TIMEZONE, date_range, time_to_float, str_to_datetime
+from aux_tools import format_axis_as_timedelta, _min, _max, str2bool, list_subfolders, DEFAULT_TIMEZONE, date_range, time_to_float, str_to_datetime
 import cv2
 import numpy as np
 from scipy.interpolate import interp1d
@@ -157,8 +157,8 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
         video_filename = 'AIM3S_experiment.mp4'
         video_out = cv2.VideoWriter(video_filename, cv2.VideoWriter_fourcc(*'avc1'), video_fps, (video_in_width, video_in_height))
 
-    TIME_INCREMENT = timedelta(seconds=0.1)  # How much to shift the time offset cameras-weights from keyboard input (arrow keys)
-    FRAME_INCREMENT = 10  # How many frames to skip forward/backward on keyboard input (ASDW)
+    TIME_INCREMENT = timedelta(seconds=0.1)  # How much to shift the time offset cameras-weights from keyboard input (ASDW)
+    FRAME_INCREMENT = 8  # How many frames to skip forward/backward on keyboard input (arrow keys)
     LEFT_RIGHT_MULTIPLIER = 10  # How much larger the skip is when using left-right (A-D) vs up-down (or W-S)
     n = -1  # Frame number
     is_paused = False
@@ -219,6 +219,8 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
                 is_paused = not is_paused
             elif k > 0:
                 print('Key pressed, exiting!')
+                cv2.destroyWindow("Frame")
+                cv2.waitKey(1)
                 break
 
             if do_skip_frames:
@@ -229,6 +231,8 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
     if save_video:
         video_out.release()  # Make sure to release the video so it's actually written to disk
         print("Video successfully saved as '{}'! :)".format(video_filename))
+
+    return weight_to_cam_t_offset, (weight_t[0]-weight_to_cam_t_offset).total_seconds()
 
 
 if __name__ == '__main__':
@@ -250,7 +254,7 @@ if __name__ == '__main__':
         pool = Pool(processes=cpu_count() if True else 4)
         tasks_state = []
 
-        folder_names = sorted(next(os.walk(args.folder))[1])  # next(os.walk('')) returns (folder_name, subfolders, files)
+        folder_names = list_subfolders(args.folder, True)
         for experiment_folder in folder_names:
             task_state = pool.apply_async(generate_multicam_video, (os.path.join(args.folder, experiment_folder),), {'video_fps': args.fps, 'overwrite': False})
             tasks_state.append(task_state)

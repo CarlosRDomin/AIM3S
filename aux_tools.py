@@ -61,8 +61,9 @@ def ensure_folder_exists(folder):
     except OSError:  # Already exists -> Ignore
         pass
 
-def list_subfolders(folder):
-    return next(os.walk(folder))[1]
+def list_subfolders(folder, do_sort=False):
+    subfolders = next(os.walk(folder))[1]
+    return subfolders if not do_sort else sorted(subfolders)
 
 def format_axis_as_timedelta(axis):  # E.g. axis=ax.xaxis
     from matplotlib import pyplot as plt

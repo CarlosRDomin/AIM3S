@@ -184,21 +184,21 @@ class ExperimentPreProcessor:
         print("{} tasks done: {}/{} ({:5.2f}%)".format(str_type, n, total, 100*n/total))
 
     def run(self):
-        # Traverse all subfolders inside args.folder and dispatch tasks to the pool of workers
+        # Traverse all subfolders inside the main_folder and dispatch tasks to the pool of workers
         for f in list_subfolders(self.main_folder):
             t = datetime.strptime(f, DATETIME_FORMAT)  # Folder name specifies the date -> Convert to datetime
 
             # Filter by experiment date (only consider experiments within t_start and t_end)
-            if t_start <= t <= t_end:
-                parent_folder = os.path.join(args.folder, f)
+            if self.start_datetime <= t <= self.end_datetime:
+                parent_folder = os.path.join(self.main_folder, f)
 
                 # Tell the weight preprocessor to merge all weight sensors into a single h5 file
-                if args.do_weight:
+                if self.do_weight:
                     task_state = self.pool_weight.apply_async(preprocess_weight, (parent_folder,), callback=lambda _: self._task_done_cb(is_weight=True))
                     self.weight_tasks_state.append(task_state)
 
                 # Tell the pose preprocessor to run pose estimation on every camera video
-                if args.do_pose:
+                if self.do_pose:
                     for video in glob.glob(os.path.join(parent_folder, "cam*_{}.mp4".format(f))):
                         kwds = {"crop_half_w": 200, "crop_half_h": 200} if os.path.basename(video).startswith("cam4") else {}  # Top-down camera is closer -> Crop bigger window
                         task_state = self.pool_vision.apply_async(preprocess_vision, (video, self.pose_model_folder), kwds, callback=lambda _: self._task_done_cb(is_weight=False))
@@ -216,7 +216,7 @@ class ExperimentPreProcessor:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("folder", default="Dataset/Characterization", help="Folder containing the experiment(s) to preprocess")
+    parser.add_argument("folder", default="Dataset/Evaluation", help="Folder containing the experiment(s) to preprocess")
     parser.add_argument("-s", "--start-datetime", default="", help="Only preprocess experiments collected later than this datetime (format: {}; empty for no limit)".format(DATETIME_FORMAT))
     parser.add_argument("-e", "--end-datetime", default="", help="Only preprocess experiments collected before this datetime (format: {}; empty for no limit)".format(DATETIME_FORMAT))
     parser.add_argument('-w', "--do-weight", default=True, type=str2bool, help="Whether or not to pre-process weight")

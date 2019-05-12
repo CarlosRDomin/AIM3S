@@ -86,7 +86,7 @@ def read_weight_data(sensor_folder, weight_calib=None, do_tare=False, is_phidget
 
     # Segments usually aren't read in (time-series) order -> Sort by timestamp
     t_inds = sensor_t.argsort()
-    sensor_t = np.array([DEFAULT_TIMEZONE.localize(datetime.fromtimestamp(t)) for t in sensor_t[t_inds]])
+    sensor_t = np.array([datetime.fromtimestamp(t, tz=DEFAULT_TIMEZONE) for t in sensor_t[t_inds]])
     sensor_data = np.array(sensor_data[t_inds, :] if is_phidget else sensor_data[t_inds])
     if do_tare:
         sensor_data -= sensor_data[0:60].mean().astype(sensor_data.dtype)  # Tare it
@@ -102,6 +102,7 @@ def read_weights_data(experiment_folder, calib_file="", F_samp=60, *args, **kwar
     # Load all weights
     t_latest_start = datetime.min.replace(tzinfo=DEFAULT_TIMEZONE)
     t_earliest_end = datetime.max.replace(tzinfo=DEFAULT_TIMEZONE)
+    print("Loading weight data from '{}', this might take ~30s, please wait :)".format(experiment_folder))
     for sensor_folder in glob.glob(os.path.join(experiment_folder, "sensors_*")):
         # Read weight
         weight_t, weight_data, plate_id = read_weight_data(sensor_folder, weight_calib, *args, **kwargs)

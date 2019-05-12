@@ -11,7 +11,7 @@ except ImportError:  # Python 3
 class MultiColumnListbox(object):
     """use a ttk.TreeView as a multicolumn ListBox"""
 
-    def __init__(self, headers, data=None, sortable=True, scrollbars_on_overflow=False, master=None, **kw):
+    def __init__(self, headers, data=None, sortable=True, scrollbars_on_overflow=False, autowidth_on_add=False, master=None, **kw):
         if scrollbars_on_overflow:
             container = ttk.Frame(master)
             container.pack(fill='both', expand=True)
@@ -33,21 +33,24 @@ class MultiColumnListbox(object):
         for iCol,col in enumerate(headers):
             on_sort = (lambda c=iCol: self.sortby(c)) if sortable else ''
             self.tree.heading(iCol, text=col, command=on_sort)
-            self.tree.column(iCol, width=tkFont.Font().measure(col.title())+10)  # Adjust the column's width to the header string
+            self.tree.column(iCol, width=tkFont.Font().measure(col))  # Adjust the column's width to the header string
 
+        self.autowidth_on_add = autowidth_on_add
         if data is not None:
             for item in data:
                 self.add_item(item)
 
     def autowidth(self, new_item):
         for iCol, val in enumerate(new_item):
-            col_w = tkFont.Font().measure(val) + 10
+            if val is None: continue
+            col_w = tkFont.Font().measure(val)
             if self.tree.column(iCol, width=None) < col_w:
                 self.tree.column(iCol, width=col_w)
 
     def add_item(self, new_item):
         self.tree.insert('', 'end', values=new_item)
-        self.autowidth(new_item)
+        if self.autowidth_on_add:
+            self.autowidth(new_item)
 
     def sortby(self, iCol, descending=False):
         """sort tree contents when a column header is clicked on"""
