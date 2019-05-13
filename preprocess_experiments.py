@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from read_dataset import read_weight_data
+from read_dataset import read_weights_data
 from aux_tools import str2bool, _min, _max, ensure_folder_exists, list_subfolders, format_axis_as_timedelta, JointEnum, save_datetime_to_h5
 from matplotlib import pyplot as plt
 from datetime import datetime
@@ -38,6 +38,7 @@ DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 HDF5_FRAME_NAME_FORMAT = "frame{:05d}"
 HDF5_POSE_GROUP_NAME = "pose"
 HDF5_HANDS_GROUP_NAME = "hands"
+HDF5_ORIG_WEIGHT_GROUP_NAME = "orig_weights"
 HDF5_WEIGHT_GROUP_NAME = "weight_{}"
 HDF5_WEIGHT_T_NAME = "t"
 HDF5_WEIGHT_DATA_NAME = "w"
@@ -48,16 +49,23 @@ def preprocess_weight(parent_folder, do_tare=False, visualize=False):
     print("Processing weights at {}".format(parent_folder))
     t_start = os.path.basename(parent_folder)
 
-    with h5py.File(os.path.join(parent_folder, "weights_{}.h5".format(t_start)), 'w') as f_hdf5:
-        for sensor_folder in glob.glob(os.path.join(parent_folder, "sensors_*")):
-            weight_t, weight_data, weight_id = read_weight_data(sensor_folder, do_tare=do_tare)
+    h5_filename = os.path.join(parent_folder, "weights_{}.h5".format(t_start))
+    if os.path.exists(h5_filename):
+        print("File {} exists, not preprocessing!".format(h5_filename))
+        return
 
-            # Save to h5 file
-            weight_group_name = HDF5_WEIGHT_GROUP_NAME.format(weight_id)
-            if weight_group_name in f_hdf5: del f_hdf5[weight_group_name]  # OVERWRITE (delete if already existed)
-            weight = f_hdf5.create_group(weight_group_name)
-            save_datetime_to_h5(weight_t, weight, HDF5_WEIGHT_T_NAME)
-            weight.create_dataset(HDF5_WEIGHT_DATA_NAME, data=weight_data)
+    weight_t, weight_data, weights_orig = read_weights_data(parent_folder, do_tare=do_tare)
+    with h5py.File(h5_filename, 'w') as f_hdf5:
+        save_datetime_to_h5(weight_t, f_hdf5, HDF5_WEIGHT_T_NAME)
+        f_hdf5.create_dataset("w", data=weight_data)
+
+        # Save original weight info as well, just in case
+        # if HDF5_ORIG_WEIGHT_GROUP_NAME in f_hdf5: del f_hdf5[HDF5_ORIG_WEIGHT_GROUP_NAME]  # OVERWRITE (delete if already existed)
+        orig_weights_group = f_hdf5.create_group(HDF5_ORIG_WEIGHT_GROUP_NAME)
+        for weight_id, weight_info in weights_orig.items():
+            orig_weight = orig_weights_group.create_group(HDF5_WEIGHT_GROUP_NAME.format(weight_id))
+            save_datetime_to_h5(weight_info['t'], orig_weight, HDF5_WEIGHT_T_NAME)
+            orig_weight.create_dataset(HDF5_WEIGHT_DATA_NAME, data=weight_info['w'])
 
             if visualize:
                 fig = plt.figure(figsize=(4, 2))
@@ -67,8 +75,8 @@ def preprocess_weight(parent_folder, do_tare=False, visualize=False):
                 ax.set_ylabel('Weight (g)')
                 format_axis_as_timedelta(ax.xaxis)
                 fig.show()
-            print("Done processing weight #{} (t={}). t_min={}; t_max={}; N={}".format(weight_id, t_start, weight_t[0], weight_t[-1], len(weight_t)))
-    print("Done processing weights at '{}'!".format(parent_folder))
+
+    print("Done processing weights as '{}'! t_min={}; t_max={}; N={}".format(h5_filename, weight_t[0], weight_t[-1], weight_data.shape))
 
 
 def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_half_w=100, crop_half_h=100):
@@ -185,7 +193,8 @@ class ExperimentPreProcessor:
 
     def run(self):
         # Traverse all subfolders inside the main_folder and dispatch tasks to the pool of workers
-        for f in list_subfolders(self.main_folder):
+        for f in list_subfolders(self.main_folder, True):
+            if f.endswith("_ignore"): continue
             t = datetime.strptime(f, DATETIME_FORMAT)  # Folder name specifies the date -> Convert to datetime
 
             # Filter by experiment date (only consider experiments within t_start and t_end)
