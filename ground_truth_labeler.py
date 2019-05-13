@@ -194,7 +194,7 @@ class GroundTruthLabeler:
                         'ground_truth': annotated_events,
                         'weight_to_cam_t_offset': str(weight_to_cam_t_offset),
                         'weight_to_cam_t_offset_float': t_offset_float,
-                    }, f_gt, indent='\t')
+                    }, f_gt, indent=2)
                 print("Ground truth annotation saved as '{}'!".format(ground_truth_file))
 
 
