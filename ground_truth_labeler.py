@@ -171,6 +171,7 @@ class GroundTruthLabeler:
 
     def run(self):
         for f in list_subfolders(self.main_folder, True):
+            if f.endswith("_ignore"): continue
             t = datetime.strptime(f, DATETIME_FORMAT)  # Folder name specifies the date -> Convert to datetime
 
             # Filter by experiment date (only consider experiments within t_start and t_end)

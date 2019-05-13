@@ -170,59 +170,72 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
     LEFT_RIGHT_MULTIPLIER = 10  # How much larger the skip is when using left-right (A-D) vs up-down (or W-S)
     n = -1  # Frame number
     is_paused = False
+    refresh_weight = True
     do_skip_frames = False
     while n < len(t_cam):
         if not is_paused or do_skip_frames:
             n += 1
             ok = video_in.read(rgb_data[:,:video_in_width,:])
             assert ok, "Couldn't read frame {}!".format(n)
+            print("Read frame {} out of {} frames ({:6.2f}%)".format(n+1, len(t_cam), 100.0*(n+1)/len(t_cam)))
 
-        # Update current time
-        curr_t = (t_cam[n]-weight_to_cam_t_offset).total_seconds()
-        if (t_start > 0 and curr_t < t_start) or (t_end > 0 and curr_t > t_end): continue
-        ax[-1,0].set_xlim(curr_t-t_lims, curr_t+t_lims)
+        if refresh_weight:
+            # Update current time
+            curr_t = (t_cam[n]-weight_to_cam_t_offset).total_seconds()
+            if (t_start > 0 and curr_t < t_start) or (t_end > 0 and curr_t > t_end): continue
+            ax[-1,0].set_xlim(curr_t-t_lims, curr_t+t_lims)
 
-        # Update weight plot and convert to image
-        for l in curr_t_lines: l.set_xdata(curr_t)
-        fig.canvas.draw()
-        weight_img = plt_fig_to_cv2_img(fig)
+            # Update weight plot and convert to image
+            for l in curr_t_lines: l.set_xdata(curr_t)
+            fig.canvas.draw()
+            weight_img = plt_fig_to_cv2_img(fig)
 
-        # Rescale weight (make the plot occupy weight_plot_scale of the whole camera frame)
-        if weight_plot_scale == 1:  # Place the weight plot to the right of the camera frames
-            cv2.resize(weight_img, None, rgb_data[:,video_in_width:,:], fx=weight_scale, fy=weight_scale)
-        else:  # Overwrite bottom-right corner of RGB frame with weight plot
-            cv2.resize(weight_img, None, rgb_data[-weight_fig_dimensions[0]:, -weight_fig_dimensions[1]:, :], fx=weight_scale, fy=weight_scale)
+            # Rescale weight (make the plot occupy weight_plot_scale of the whole camera frame)
+            if weight_plot_scale == 1:  # Place the weight plot to the right of the camera frames
+                cv2.resize(weight_img, None, rgb_data[:,video_in_width:,:], fx=weight_scale, fy=weight_scale)
+            else:  # Overwrite bottom-right corner of RGB frame with weight plot
+                cv2.resize(weight_img, None, rgb_data[-weight_fig_dimensions[0]:, -weight_fig_dimensions[1]:, :], fx=weight_scale, fy=weight_scale)
 
         # Output the image (show it and write to file)
         if save_video:
             video_out.write(rgb_data if out_scale==1 else cv2.resize(rgb_data, None, fx=out_scale, fy=out_scale))
-        print("{} out of {} frames ({:6.2f}%) written!".format(n+1, len(t_cam), 100.0*(n+1)/len(t_cam)))
+            print("{} out of {} frames ({:6.2f}%) written!".format(n+1, len(t_cam), 100.0*(n+1)/len(t_cam)))
 
         if visualize:
-            cv2.imshow("Frame", rgb_data if out_scale==1 else cv2.resize(rgb_data, None, fx=out_scale, fy=out_scale))
+            if not is_paused or refresh_weight:
+                cv2.imshow("Frame", rgb_data if out_scale==1 else cv2.resize(rgb_data, None, fx=out_scale, fy=out_scale))
             # Let the visualization be stopped by pressing a key
-            k = cv2.waitKeyEx(1)
+            k = cv2.waitKeyEx(1 if not is_paused else 0)
             do_skip_frames = False
+            refresh_weight = False
             if k == 63234:  # Left arrow (at least on my Mac)
                 n -= LEFT_RIGHT_MULTIPLIER*FRAME_INCREMENT
                 do_skip_frames = True
+                refresh_weight = True
             elif k == 63235:  # Right arrow
                 n += LEFT_RIGHT_MULTIPLIER*FRAME_INCREMENT
                 do_skip_frames = True
+                refresh_weight = True
             elif k == 63232:  # Up arrow
                 n += FRAME_INCREMENT
                 do_skip_frames = True
+                refresh_weight = True
             elif k == 63233:  # Down arrow
                 n -= FRAME_INCREMENT
                 do_skip_frames = True
+                refresh_weight = True
             elif k == ord('a'):
                 weight_to_cam_t_offset -= LEFT_RIGHT_MULTIPLIER*TIME_INCREMENT
+                refresh_weight = True
             elif k == ord('d'):
                 weight_to_cam_t_offset += LEFT_RIGHT_MULTIPLIER*TIME_INCREMENT
+                refresh_weight = True
             elif k == ord('w'):
                 weight_to_cam_t_offset -= TIME_INCREMENT
+                refresh_weight = True
             elif k == ord('s'):
                 weight_to_cam_t_offset += TIME_INCREMENT
+                refresh_weight = True
             elif k == ord('b') and cb_event_start_or_end is not None:
                 cb_event_start_or_end(True, t_cam[n])
             elif k == ord('n') and cb_event_start_or_end is not None:
@@ -234,6 +247,7 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
                 cv2.destroyWindow("Frame")
                 cv2.waitKey(1)
                 break
+            refresh_weight = refresh_weight or not is_paused
 
             if do_skip_frames:
                 video_in.set(cv2.CAP_PROP_POS_FRAMES, n)
