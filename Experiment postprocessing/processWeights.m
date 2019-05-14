@@ -1,51 +1,51 @@
 addpath(genpath('.'));	% Make sure all folders and subfolders are added to the path
 cdToThisScriptsDirectory();	% Change directory to the folder containing this script
-systemParams = struct('movAvgWindowInSamples',90, 'epsVar',1e4, 'epsMean',10, 'Nb',60, 'Ne',60);
+systemParams = struct('movAvgWindowInSamples',90, 'epsVar',500, 'epsMean',10, 'Nb',30, 'Ne',30);
 
 %% Load experiment
 DATA_FOLDER = '../Dataset';
 experimentType = 'Evaluation';
 tStr = '2019-04-03_19-50-26';
-[weights, experimentInfo, weightsOrig] = loadWeightsData(experimentType, tStr);
-[events, weights] = detectWeightEvents(weights, 1, systemParams, experimentInfo);
-eventInds = computeEventActiveState(events, weights);
+[weights, experimentInfo] = loadWeightsData(tStr, experimentType, DATA_FOLDER, systemParams);
+[events, weightsPerBin, weightsPerShelf] = detectWeightEvents(weights, 1, systemParams);
+eventInds = computeEventActiveState(events, weightsPerBin);
 
 %% Sum of plates in a shelf per plot
-figure('WindowState','maximized');
-weightsPerShelf = aggregateWeightsPerShelf(weights, systemParams);
-for iW = 1:size(weightsPerShelf.w, 1)
-	subplot(size(weightsPerShelf.w, 1), 1, iW); hold on;
-	plot(weightsPerShelf.t, weightsPerShelf.w(iW,:)); plot(weightsPerShelf.t, weightsPerShelf.wMean(iW,:), 'LineWidth', 2);
-	yyaxis right; plot(weightsPerShelf.t, eventInds(iW,:), '--r', 'LineWidth', 2);
-	%plot(weightsPerShelf.t, weightsPerShelf.wVar(iW,:), '--r', 'LineWidth', 2);
-	set(gca, 'YGrid','on', 'XLim',[weightsPerShelf.t(1) weightsPerShelf.t(end)]);
+for i = 1:2
+    figure('WindowState','maximized');
+    for iS = 1:size(weightsPerShelf.w, 2)
+        subplot(size(weightsPerShelf.w, 2), 1, size(weightsPerShelf.w, 2)-iS+1); hold on;
+        if i == 2
+            plot(weightsPerShelf.t, weightsPerShelf.w(:,iS)); plot(weightsPerShelf.t, weightsPerShelf.wMean(:,iS), 'LineWidth', 2);
+        else
+            plot(weightsPerShelf.t, weightsPerShelf.wVar(:,iS), 'LineWidth', 2);
+        end
+        yyaxis right; plot(weightsPerShelf.t, eventInds(:,iS), '--r', 'LineWidth', 2); ylim([0 1]);
+        set(gca, 'YGrid','on', 'XLim',[weightsPerShelf.t(1) weightsPerShelf.t(end)]);
+        title(sprintf('Shelf %d', iS));
+    end
 end
 return
 
-%% One plot per plate
+%% One plot per bin
 figure('WindowState','maximized'); pause(0.1);
-for iW = 1:size(weights.w, 1)
-	for jW = 1:size(weights.w, 2)
-		if isempty(weightsOrig(iW,jW).t), continue; end  % Sometimes we forgot to record some weight scales, ignore those
-		t = weights.t; w = squeeze(weights.w(iW,jW,:));
-		wMean = squeeze(weights.wMean(iW,jW,:)); wVar = squeeze(weights.wVar(iW,jW,:));
-		
-		subtightplot(size(weights.w,1), size(weights.w,2), jW + size(weights.w,2)*(iW-1)); hold on;
-		plot(t, w); plot(t, wMean, 'LineWidth', 3);
-		yyaxis right; plot(t, wVar, '--r', 'LineWidth', 2);
-		set(gca, 'YGrid','on', 'XLim',[t(1) t(end)]);
+for iS = 1:size(weightsPerBin.w, 2)
+	for iB = 1:size(weightsPerBin.w, 3)
+		subtightplot(size(weightsPerBin.w,2), size(weightsPerBin.w,3), iB + size(weightsPerBin.w,3)*(size(weightsPerBin.w, 2)-iS)); hold on;
+		plot(weightsPerBin.t, weightsPerBin.w(:,iS,iB)); plot(weightsPerBin.t, weightsPerBin.wMean(:,iS,iB), 'LineWidth', 3);
+		yyaxis right; plot(weightsPerBin.t, weightsPerBin.wVar(:,iS,iB), '--r', 'LineWidth', 2);
+		set(gca, 'YGrid','on', 'XLim',[weightsPerBin.t(1) weightsPerBin.t(end)]);
+        title(sprintf('s%d - b%d', iS, iB));
 	end
 end
 
 %% All plates in one plot
 figure('WindowState','maximized');
-for iW = 1:size(weights.w, 1)
-	for jW = 1:size(weights.w, 2)
-		if isempty(weightsOrig(iW,jW).t), continue; end  % Sometimes we forgot to record some weight scales, ignore those
-		t = weights.t; w = squeeze(weights.w(iW,jW,:));
-		wMean = squeeze(weights.wMean(iW,jW,:)); wVar = squeeze(weights.wVar(iW,jW,:));
-		
-		subplot(2,1,1); hold on; plot(t, w); set(gca, 'YGrid','on', 'XLim',[t(1) t(end)]);
-		subplot(2,1,2); hold on; plot(t, wMean, 'LineWidth', 2); set(gca, 'YGrid','on', 'XLim',[t(1) t(end)]);
+for iS = 1:size(weights.w, 2)
+	for iB = 1:size(weights.w, 3)
+		subplot(2,1,1); hold on; plot(weights.t, weights.w(:,iS,iB));
+		subplot(2,1,2); hold on; plot(weights.t, weights.wMean(:,iS,iB), 'LineWidth', 2);
 	end
 end
+subplot(2,1,1); set(gca, 'YGrid','on', 'XLim',[weights.t(1) weights.t(end)]);
+subplot(2,1,2); set(gca, 'YGrid','on', 'XLim',[weights.t(1) weights.t(end)]);

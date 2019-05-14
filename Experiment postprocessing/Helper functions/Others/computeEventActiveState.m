@@ -1,7 +1,7 @@
 function eventInds = computeEventActiveState(events, weights)
-	eventInds = false(size(weights.w, 1), size(weights.w, ndims(weights.w)));  % numShelves x t
+	eventInds = false(size(weights.w, 1), size(weights.w, 2));  % numShelves x t
 	for i = 1:length(events)
-		eventInds(events(i).shelf, events(i).nB:events(i).nE) = true;
+		eventInds(events(i).nB:events(i).nE, events(i).shelf) = true;
 	end
 end
 
