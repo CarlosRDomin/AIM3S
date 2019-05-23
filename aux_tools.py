@@ -102,6 +102,13 @@ def str_to_datetime(str_dt, tz=DEFAULT_TIMEZONE):
     t = dateparser.parse(str_dt.decode('utf8'))
     return tz.localize(t) if tz is not None and t.tzinfo is None else t
 
+def plt_fig_to_cv2_img(fig):
+    img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    img = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)  # img is rgb, convert to opencv's default bgr
+
+    return img
+
 
 # Aux helper classes
 class HSVthreshHelper:

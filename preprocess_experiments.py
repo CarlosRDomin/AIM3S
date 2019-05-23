@@ -60,7 +60,6 @@ def preprocess_weight(parent_folder, do_tare=False, visualize=False):
         f_hdf5.create_dataset("w", data=weight_data)
 
         # Save original weight info as well, just in case
-        # if HDF5_ORIG_WEIGHT_GROUP_NAME in f_hdf5: del f_hdf5[HDF5_ORIG_WEIGHT_GROUP_NAME]  # OVERWRITE (delete if already existed)
         orig_weights_group = f_hdf5.create_group(HDF5_ORIG_WEIGHT_GROUP_NAME)
         for weight_id, weight_info in weights_orig.items():
             orig_weight = orig_weights_group.create_group(HDF5_WEIGHT_GROUP_NAME.format(weight_id))

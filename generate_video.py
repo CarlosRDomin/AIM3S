@@ -2,7 +2,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 from preprocess_experiments import HDF5_WEIGHT_GROUP_NAME
-from aux_tools import format_axis_as_timedelta, _min, _max, str2bool, list_subfolders, DEFAULT_TIMEZONE, date_range, time_to_float, str_to_datetime
+from aux_tools import format_axis_as_timedelta, _min, _max, str2bool, list_subfolders, DEFAULT_TIMEZONE, date_range, time_to_float, str_to_datetime, plt_fig_to_cv2_img
 import cv2
 import numpy as np
 from scipy.interpolate import interp1d
@@ -11,14 +11,6 @@ from datetime import datetime, timedelta
 import os
 import h5py
 import argparse
-
-
-def plt_fig_to_cv2_img(fig):
-    img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    img = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    img = cv2.cvtColor(img,cv2.COLOR_RGB2BGR)  # img is rgb, convert to opencv's default bgr
-
-    return img
 
 
 def generate_multicam_video(experiment_base_folder, video_out_filename=None, t_start=0, t_end=-1, video_fps=25, visualize=False, overwrite=False):
