@@ -1,12 +1,10 @@
-import matplotlib
-matplotlib.use('TkAgg')
-
 from threading import Event
 from generate_video import generate_multicam_video
 from preprocess_experiments import DATETIME_FORMAT
 from aux_tools import list_subfolders, str2bool, str_to_datetime, date_range, time_to_float, format_axis_as_timedelta, plt_fig_to_cv2_img
 from datetime import datetime, timedelta
 from matplotlib import pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from PIL import Image, ImageTk
 from queue import Queue
 import os
@@ -44,7 +42,7 @@ class VideoAndWeightHandler:
         self.refresh_weight = True
         self.do_skip_frames = False
         self.t_lims = 3  # How many seconds of weight to show on either side of curr_t
-        self.out_scale = 0.5  # Rescale rgb_data before converting to Tkinter image (~3X faster to render)
+        self.out_scale = 0.5  # Rescale video_img before converting to Tkinter image (~3X faster to render)
         self.keys_pressed = Queue()
         self.tk_img = None
 
@@ -54,6 +52,8 @@ class VideoAndWeightHandler:
         with h5py.File(os.path.splitext(video_in_filename)[0] + ".h5", 'r') as h5_cam:
             self.t_cam = np.array(list(date_range(str_to_datetime(h5_cam.attrs['t_start']), str_to_datetime(h5_cam.attrs['t_end']), timedelta(seconds=1.0/h5_cam.attrs['fps']))))
         self.video_dims = np.array([self.video_in.get(cv2.CAP_PROP_FRAME_HEIGHT), self.video_in.get(cv2.CAP_PROP_FRAME_WIDTH)]).astype(int)
+        self.video_downsampled_dims = (self.out_scale * self.video_dims).astype(int)
+        self.weight_dims = np.array([self.video_downsampled_dims[0], 350]).astype(int)
 
         # Read all weight sensors for the full experiment duration at once
         t_experiment_start = experiment_base_folder.rsplit('/', 1)[-1]  # Last folder in the path should indicate time at which experiment started
@@ -67,7 +67,7 @@ class VideoAndWeightHandler:
         self.weight_to_cam_t_offset = self.weight_t[0] + timedelta(seconds=13)  # Initialize the offset to ~13s (empirical)
 
         # Set up matplotlib figure
-        self.fig = plt.figure(figsize=(3.5,5))
+        self.fig = plt.figure(figsize=self.weight_dims[::-1]/100.0)
         num_subplots = len(w)
         ax = self.fig.subplots(num_subplots, 1, sharex=True, squeeze=False)
         self.curr_t_lines = []
@@ -80,19 +80,15 @@ class VideoAndWeightHandler:
             self.curr_t_lines.append(ax[i,0].axvline(0, linestyle='--', color='black', linewidth=1))
         # Render the figure once to get its dimensions
         self.fig.canvas.draw()
-        weight_img = plt_fig_to_cv2_img(self.fig)
-        self.weight_scale = float(self.video_dims[0])/weight_img.shape[0]
-        self.weight_fig_dims = (self.weight_scale * np.array(weight_img.shape[:2])).astype(int)
         # Allocate extra space when the figure is going to be plotted to the right of the video
-        self.rgb_data = np.zeros((self.video_dims[0], self.video_dims[1]+self.weight_fig_dims[1], 3), dtype=np.uint8)
-        self.downsampled_img = np.zeros((int(self.out_scale*self.rgb_data.shape[0]), int(self.out_scale*self.rgb_data.shape[1]), 3), dtype=np.uint8) if self.out_scale != 1 else None
-        self.downsampled_dims = self.downsampled_img.shape[1::-1]
+        self.video_img = np.zeros((self.video_dims[0], self.video_dims[1], 3), dtype=np.uint8)
+        self.video_downsampled_img = np.zeros((self.video_downsampled_dims[0], self.video_downsampled_dims[1], 3), dtype=np.uint8) if self.out_scale != 1 else None
 
     def grab_next_frame(self):
         t = [datetime.now()]
         if not self.is_paused or self.do_skip_frames:
             self.n += 1
-            ok = self.video_in.read(self.rgb_data[:, :self.video_dims[1], :])
+            ok = self.video_in.read(self.video_img[:, :self.video_dims[1], :])
             assert ok, "Couldn't read frame {}!".format(self.n)
             print("Read frame {} out of {} frames ({:6.2f}%)".format(self.n+1, len(self.t_cam), 100.0*(self.n+1)/len(self.t_cam)))
 
@@ -103,21 +99,15 @@ class VideoAndWeightHandler:
 
             # Update weight plot and convert to image
             for l in self.curr_t_lines: l.set_xdata(curr_t)
-            t.append(datetime.now())
             self.fig.canvas.draw()
-            t.append(datetime.now())
-            weight_img = plt_fig_to_cv2_img(self.fig)
-
-            # Place the weight plot to the right of the camera frames
-            cv2.resize(weight_img, None, self.rgb_data[:,self.video_dims[1]:,:], fx=self.weight_scale, fy=self.weight_scale)
 
         if not self.is_paused or self.refresh_weight:
-            if self.downsampled_img is not None:
-                img = cv2.resize(self.rgb_data, self.downsampled_dims, self.downsampled_img)
+            if self.video_downsampled_img is not None:
+                img = cv2.resize(self.video_img, tuple(self.video_downsampled_dims[::-1]), self.video_downsampled_img)
             else:
-                img = self.rgb_data
+                img = self.video_img
             cv2.cvtColor(img, cv2.COLOR_BGR2RGB, img)
-            self.tk_img = ImageTk.PhotoImage(image=Image.fromarray(img))
+            self.tk_img.paste(Image.fromarray(img))
             self.new_video_and_weight_frame_ready.set()
 
         # Process key presses
@@ -125,7 +115,6 @@ class VideoAndWeightHandler:
         if self.do_skip_frames:
             self.video_in.set(cv2.CAP_PROP_POS_FRAMES, self.n)
             self.n = int(self.video_in.get(cv2.CAP_PROP_POS_FRAMES))  # Don't let it go over the length of the video
-        print("Process frame: {}".format(", ".join(["{:.2f}ms".format(1000*(t[i]-t[i-1]).total_seconds()) for i in range(1,len(t))])))
 
     def handle_kb_input(self):
         self.do_skip_frames = False
@@ -190,7 +179,8 @@ class GroundTruthLabelerWindow:
         self.user_wants_to_exit = Event()
 
         self.video_and_weight = VideoAndWeightHandler(experiment_base_folder, self.on_set_event_time_start_or_end, self.new_video_and_weight_frame_ready, self.user_wants_to_exit)
-        canvas_size = tuple( int(self.video_and_weight.out_scale*d) for d in self.video_and_weight.rgb_data.shape[:2] )
+        video_canvas_size = self.video_and_weight.video_downsampled_dims
+        weight_canvas_size = self.video_and_weight.weight_dims
 
         # Load product info
         with open("Dataset/product_info.json", 'r') as f:
@@ -202,7 +192,7 @@ class GroundTruthLabelerWindow:
         # Setup ui
         self.ui = tk.Tk()
         self.ui.title("Ground truth labeler")
-        self.ui.geometry("{}x{}".format(canvas_size[1], canvas_size[0]+300))  # WxH
+        self.ui.geometry("{}x{}".format(video_canvas_size[1]+weight_canvas_size[1], video_canvas_size[0]+300))  # WxH
         self.ui.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.ui_container = ttk.Frame(self.ui)
         self.ui_container.pack(fill='both', expand=True, padx=10, pady=10, ipadx=20)
@@ -216,18 +206,24 @@ class GroundTruthLabelerWindow:
         self.events = []
 
         # Widgets
-        self.canvas = tk.Canvas(self.ui, width=canvas_size[1], height=canvas_size[0])
-        self.canvas_image = self.canvas.create_image(0, 0, image=self.video_and_weight.tk_img, anchor='nw')
-        self.canvas.grid(column=0, columnspan=6, row=0, in_=self.ui_container)
+        self.canvas_container = ttk.Frame(self.ui)
+        self.canvas_container.grid(column=0, columnspan=6, row=0, in_=self.ui_container)
+        self.video_canvas = tk.Canvas(self.ui, width=video_canvas_size[1], height=video_canvas_size[0])
+        self.video_and_weight.tk_img = ImageTk.PhotoImage(master=self.video_canvas, width=video_canvas_size[1], height=video_canvas_size[0], image="RGB")
+        self.canvas_image = self.video_canvas.create_image(0, 0, image=self.video_and_weight.tk_img, anchor='nw')
+        self.video_canvas.grid(column=0, row=0, in_=self.canvas_container)
+        self.weight_canvas = FigureCanvasTkAgg(self.video_and_weight.fig, master=self.ui)
+        self.weight_canvas.draw()
+        self.weight_canvas.get_tk_widget().grid(column=1, row=0, in_=self.canvas_container)
         self.lst_events = MultiColumnListbox(column_headers, master=self.ui)
         for i,w in enumerate(column_widths):
             if w > 0:
                 self.lst_events.tree.column(i, width=w, stretch=False)
         self.lst_events.tree.grid(column=0, columnspan=6, row=1, sticky='nesw', in_=self.ui_container)
-        num_quantity = tk.Spinbox(self.ui, from_=1, to_=5, width=3, textvariable=self.quantity)
+        num_quantity = tk.Spinbox(self.ui, from_=1, to_=5, width=1, borderwidth=0, textvariable=self.quantity)
         num_quantity.grid(column=0, row=2, rowspan=2, in_=self.ui_container)
         drp_product = tk.OptionMenu(self.ui, self.selected_product, *options)
-        drp_product.grid(column=1, row=2, rowspan=2, sticky='ew', in_=self.ui_container)
+        drp_product.grid(column=1, row=2, rowspan=2, sticky='ew', ipadx=10, in_=self.ui_container)
         opt_pickup = tk.Radiobutton(self.ui, text="Pick up", variable=self.is_pickup, value=True)
         opt_pickup.grid(column=2, row=2, sticky='ew', ipadx=10, in_=self.ui_container)
         opt_pickup = tk.Radiobutton(self.ui, text="Put back", variable=self.is_pickup, value=False)
@@ -272,7 +268,7 @@ class GroundTruthLabelerWindow:
         self.video_and_weight.grab_next_frame()
         if self.new_video_and_weight_frame_ready.is_set():
             self.new_video_and_weight_frame_ready.clear()
-            self.canvas.itemconfig(self.canvas_image, image=self.video_and_weight.tk_img)
+            # self.video_canvas.itemconfig(self.canvas_image, image=self.video_and_weight.tk_img)  # Not needed anymore
 
         # Check if user pressed Escape
         if self.user_wants_to_exit.is_set():
