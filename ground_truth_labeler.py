@@ -33,10 +33,11 @@ class VideoAndWeightHandler:
     FRAME_INCREMENT = 8  # How many frames to skip forward/backward on keyboard input (arrow keys)
     LEFT_RIGHT_MULTIPLIER = 10  # How much larger the skip is when using left-right (A-D) vs up-down (or W-S)
 
-    def __init__(self, experiment_base_folder, cb_event_start_or_end, new_video_and_weight_frame_ready, user_wants_to_exit):
+    def __init__(self, experiment_base_folder, cb_event_start_or_end, new_video_and_weight_frame_ready, user_wants_to_exit, update_xaxis=False):
         self.cb_event_start_or_end = cb_event_start_or_end
         self.new_video_and_weight_frame_ready = new_video_and_weight_frame_ready
         self.user_wants_to_exit = user_wants_to_exit
+        self.update_xaxis = update_xaxis  # For faster plot update, set this to False and the weight's xaxis will be static (-0:03 -0:02 ... 0:03)
         self.n = -1  # Frame number
         self.is_paused = False
         self.refresh_weight = True
@@ -73,14 +74,26 @@ class VideoAndWeightHandler:
         self.curr_t_lines = []
         for i in range(num_subplots):
             shelf_i = num_subplots - (i+1)  # Shelf 1 is at the bottom
-            ax[i,0].plot(t_w, w[shelf_i])
+            # Plot weight and a vertical line at currT. Draw invisible: we'll copy the canvas bgnd, then make it visible
+            ax[i,0].plot(t_w, w[shelf_i], visible=False)
+            self.curr_t_lines.append(ax[i,0].axvline(0, linestyle='--', color='black', linewidth=1, visible=False))
             ax[i,0].set_title('Shelf {}'.format(shelf_i+1))
-            ax[i,0].set_ylabel('Weight (g)')
+            ax[i,0].set_xlim(-self.t_lims, self.t_lims)
             format_axis_as_timedelta(ax[i,0].xaxis)
-            self.curr_t_lines.append(ax[i,0].axvline(0, linestyle='--', color='black', linewidth=1))
-        # Render the figure once to get its dimensions
+
+            # update_xaxis=False means weight's xaxis will be static (always show: -0:03 -0:02 ... 0:03)
+            # update_xaxis=True means we'll rerender the xaxis on every replot -> Need to hide the labels before copying the canvas bgnd
+            ax[i,0].tick_params(axis='both', which='both', bottom=not self.update_xaxis, labelbottom=not self.update_xaxis)
+
+        # Render the figure and save background so updating the plot can be much faster (using blit instead of draw)
         self.fig.canvas.draw()
-        # Allocate extra space when the figure is going to be plotted to the right of the video
+        self.bg_cache = self.fig.canvas.copy_from_bbox(self.fig.bbox)
+        for i in range(num_subplots):  # Make everything visible again
+            for l in ax[i,0].lines: l.set_visible(True)
+            is_last = (i == num_subplots-1)
+            ax[i,0].tick_params(axis='both', which='both', bottom=True, labelbottom=is_last)
+
+        # Allocate memory space for a video frame and a downsampled copy
         self.video_img = np.zeros((self.video_dims[0], self.video_dims[1], 3), dtype=np.uint8)
         self.video_downsampled_img = np.zeros((self.video_downsampled_dims[0], self.video_downsampled_dims[1], 3), dtype=np.uint8) if self.out_scale != 1 else None
 
@@ -93,13 +106,18 @@ class VideoAndWeightHandler:
             print("Read frame {} out of {} frames ({:6.2f}%)".format(self.n+1, len(self.t_cam), 100.0*(self.n+1)/len(self.t_cam)))
 
         if self.refresh_weight:
-            # Update current time
+            # Update current time and redraw whatever needed
             curr_t = (self.t_cam[self.n]-self.weight_to_cam_t_offset).total_seconds()
-            self.fig.get_axes()[-1].set_xlim(curr_t-self.t_lims, curr_t+self.t_lims)
+            for l in self.curr_t_lines: l.set_xdata(curr_t)
+            self.fig.canvas.restore_region(self.bg_cache)
+            for ax in self.fig.get_axes():
+                ax.set_xlim(curr_t-self.t_lims, curr_t+self.t_lims)
+                for l in ax.lines: ax.draw_artist(l)
+                if self.update_xaxis:
+                    ax.draw_artist(ax.xaxis)
 
             # Update weight plot and convert to image
-            for l in self.curr_t_lines: l.set_xdata(curr_t)
-            self.fig.canvas.draw()
+            self.fig.canvas.blit()
 
         if not self.is_paused or self.refresh_weight:
             if self.video_downsampled_img is not None:

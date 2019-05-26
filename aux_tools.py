@@ -70,8 +70,11 @@ def format_axis_as_timedelta(axis):  # E.g. axis=ax.xaxis
     from datetime import timedelta
 
     def timedelta2str(td):
-        s = str(td)
-        return s if not s.startswith("0:") else s[2:]
+        is_negative = (td.total_seconds() < 0)
+        s = str(td if not is_negative else -td)  # str(td) prints "-1 day, 23:59:59" if td=-1s -> Print "0:01" instead
+        if s.startswith("0:"): s = s[2:]  # Remove hours if hours=0
+        if is_negative: s = '-' + s  # Add the '-' sign if needed
+        return s
 
     axis.set_major_formatter(plt.FuncFormatter(lambda x, pos: timedelta2str(timedelta(seconds=x))))
 
