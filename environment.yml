@@ -70,5 +70,4 @@ dependencies:
   - pip:
     - googleapis-common-protos==1.5.10
     - grpcio==1.20.1
-prefix: /miniconda3/envs/aim3s
 

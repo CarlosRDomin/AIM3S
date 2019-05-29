@@ -9,7 +9,7 @@ except ImportError:  # Python 3
 
 
 class MultiColumnListbox(object):
-    """use a ttk.TreeView as a multicolumn ListBox"""
+    """Use a ttk.TreeView as a multicolumn ListBox"""
 
     def __init__(self, headers, data=None, sortable=True, scrollbars_on_overflow=False, autowidth_on_add=False, master=None, **kw):
         if scrollbars_on_overflow:

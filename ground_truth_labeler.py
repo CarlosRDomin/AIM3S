@@ -33,9 +33,8 @@ class VideoAndWeightHandler:
     FRAME_INCREMENT = 8  # How many frames to skip forward/backward on keyboard input (arrow keys)
     LEFT_RIGHT_MULTIPLIER = 10  # How much larger the skip is when using left-right (A-D) vs up-down (or W-S)
 
-    def __init__(self, experiment_base_folder, cb_event_start_or_end, new_video_and_weight_frame_ready, user_wants_to_exit, update_xaxis=False):
+    def __init__(self, experiment_base_folder, cb_event_start_or_end, user_wants_to_exit, update_xaxis=False):
         self.cb_event_start_or_end = cb_event_start_or_end
-        self.new_video_and_weight_frame_ready = new_video_and_weight_frame_ready
         self.user_wants_to_exit = user_wants_to_exit
         self.update_xaxis = update_xaxis  # For faster plot update, set this to False and the weight's xaxis will be static (-0:03 -0:02 ... 0:03)
         self.n = -1  # Frame number
@@ -97,36 +96,41 @@ class VideoAndWeightHandler:
         self.video_img = np.zeros((self.video_dims[0], self.video_dims[1], 3), dtype=np.uint8)
         self.video_downsampled_img = np.zeros((self.video_downsampled_dims[0], self.video_downsampled_dims[1], 3), dtype=np.uint8) if self.out_scale != 1 else None
 
-    def grab_next_frame(self):
-        t = [datetime.now()]
+    def init_tk_img(self, master=None):
+        self.tk_img = ImageTk.PhotoImage(master=master, width=self.video_downsampled_dims[1], height=self.video_downsampled_dims[0], image="RGB")
+        return self.tk_img
+
+    def update(self):
+        # Update video frame (if needed)
         if not self.is_paused or self.do_skip_frames:
+            # Grab next frame
             self.n += 1
             ok = self.video_in.read(self.video_img[:, :self.video_dims[1], :])
             assert ok, "Couldn't read frame {}!".format(self.n)
             print("Read frame {} out of {} frames ({:6.2f}%)".format(self.n+1, len(self.t_cam), 100.0*(self.n+1)/len(self.t_cam)))
 
-        if self.refresh_weight:
-            # Update current time and redraw whatever needed
-            curr_t = (self.t_cam[self.n]-self.weight_to_cam_t_offset).total_seconds()
-            for l in self.curr_t_lines: l.set_xdata(curr_t)
-            self.fig.canvas.restore_region(self.bg_cache)
-            for ax in self.fig.get_axes():
-                ax.set_xlim(curr_t-self.t_lims, curr_t+self.t_lims)
-                for l in ax.lines: ax.draw_artist(l)
-                if self.update_xaxis:
-                    ax.draw_artist(ax.xaxis)
-
-            # Update weight plot and convert to image
-            self.fig.canvas.blit()
-
-        if not self.is_paused or self.refresh_weight:
+            # Render the frame
             if self.video_downsampled_img is not None:
                 img = cv2.resize(self.video_img, tuple(self.video_downsampled_dims[::-1]), self.video_downsampled_img)
             else:
                 img = self.video_img
             cv2.cvtColor(img, cv2.COLOR_BGR2RGB, img)
             self.tk_img.paste(Image.fromarray(img))
-            self.new_video_and_weight_frame_ready.set()
+
+        # Update weight plot (if needed)
+        if self.refresh_weight:
+            # Update current time and redraw whatever needed
+            curr_t = (self.t_cam[self.n]-self.weight_to_cam_t_offset).total_seconds()
+            self.fig.canvas.restore_region(self.bg_cache)  # We'll render on top of our cached bgnd (contains subplot frames, shelf number [title], ylabels, etc)
+            for l in self.curr_t_lines: l.set_xdata(curr_t)  # Update time cursor (dashed black lines)
+            for ax in self.fig.get_axes():
+                ax.set_xlim(curr_t-self.t_lims, curr_t+self.t_lims)  # Update xlims to be centered on current time
+                for l in ax.lines: ax.draw_artist(l)  # Redraw all lines
+                if self.update_xaxis:  # Redraw xlabels if needed
+                    ax.draw_artist(ax.xaxis)
+
+            # Refresh weight plot (using blitting for a ~5X speedup vs canvas.draw())
+            self.fig.canvas.blit()
 
         # Process key presses
         self.handle_kb_input()
@@ -181,11 +185,6 @@ class VideoAndWeightHandler:
                 self.user_wants_to_exit.set()
         self.refresh_weight = self.refresh_weight or not self.is_paused
 
-    def run(self):
-        while not self.user_wants_to_exit.is_set():
-            self.grab_next_frame()
-        self.video_in.release()
-
 
 class GroundTruthLabelerWindow:
     DELAY_FPS = 10  # msec
@@ -193,10 +192,9 @@ class GroundTruthLabelerWindow:
     def __init__(self, experiment_base_folder):
         self.weight_to_cam_t_offset = None
         self.t_offset_float = 0
-        self.new_video_and_weight_frame_ready = Event()
         self.user_wants_to_exit = Event()
 
-        self.video_and_weight = VideoAndWeightHandler(experiment_base_folder, self.on_set_event_time_start_or_end, self.new_video_and_weight_frame_ready, self.user_wants_to_exit)
+        self.video_and_weight = VideoAndWeightHandler(experiment_base_folder, self.on_set_event_time_start_or_end, self.user_wants_to_exit)
         video_canvas_size = self.video_and_weight.video_downsampled_dims
         weight_canvas_size = self.video_and_weight.weight_dims
 
@@ -227,9 +225,8 @@ class GroundTruthLabelerWindow:
         self.canvas_container = ttk.Frame(self.ui)
         self.canvas_container.grid(column=0, columnspan=6, row=0, in_=self.ui_container)
         self.video_canvas = tk.Canvas(self.ui, width=video_canvas_size[1], height=video_canvas_size[0])
-        self.video_and_weight.tk_img = ImageTk.PhotoImage(master=self.video_canvas, width=video_canvas_size[1], height=video_canvas_size[0], image="RGB")
-        self.canvas_image = self.video_canvas.create_image(0, 0, image=self.video_and_weight.tk_img, anchor='nw')
         self.video_canvas.grid(column=0, row=0, in_=self.canvas_container)
+        self.canvas_image = self.video_canvas.create_image(0, 0, image=self.video_and_weight.init_tk_img(self.video_canvas), anchor='nw')
         self.weight_canvas = FigureCanvasTkAgg(self.video_and_weight.fig, master=self.ui)
         self.weight_canvas.draw()
         self.weight_canvas.get_tk_widget().grid(column=1, row=0, in_=self.canvas_container)
@@ -283,10 +280,7 @@ class GroundTruthLabelerWindow:
         self._update_time()
 
     def update_canvas(self):
-        self.video_and_weight.grab_next_frame()
-        if self.new_video_and_weight_frame_ready.is_set():
-            self.new_video_and_weight_frame_ready.clear()
-            # self.video_canvas.itemconfig(self.canvas_image, image=self.video_and_weight.tk_img)  # Not needed anymore
+        self.video_and_weight.update()
 
         # Check if user pressed Escape
         if self.user_wants_to_exit.is_set():
