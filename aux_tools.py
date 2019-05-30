@@ -116,6 +116,34 @@ def plt_fig_to_cv2_img(fig):
 
 
 # Aux helper classes
+class ExperimentTraverser:
+    def __init__(self, main_folder, start_datetime=datetime.min, end_datetime=datetime.max):
+        self.main_folder = main_folder
+        self.start_datetime = start_datetime
+        self.end_datetime = end_datetime
+
+    def process_subfolder(self, f):
+        pass  # Implement in subclass
+
+    def on_done(self):
+        pass  # Implement in subclass
+
+    def run(self):
+        for f in list_subfolders(self.main_folder, True):
+            if f.endswith("_ignore"): continue
+            try:
+                t = datetime.strptime(f, EXPERIMENT_DATETIME_STR_FORMAT)  # Folder name specifies the date -> Convert to datetime
+            except:
+                print("Can't parse the name of this folder: '{}'. Skipping...".format(f))
+                continue
+
+            # Filter by experiment date (only consider experiments within t_start and t_end)
+            if self.start_datetime <= t <= self.end_datetime:
+                self.process_subfolder(f)
+
+        self.on_done()
+
+
 class HSVthreshHelper:
     WIN_NAME = "HSV thresholding aux tool"
     PIXEL_INFO_RADIUS = 3
@@ -196,25 +224,6 @@ class HSVthreshHelper:
                 break
 
         cv2.destroyAllWindows()
-
-
-class ExperimentTraverser:
-    def __init__(self, main_folder, start_datetime=datetime.min, end_datetime=datetime.max):
-        self.main_folder = main_folder
-        self.start_datetime = start_datetime
-        self.end_datetime = end_datetime
-
-    def process_subfolder(self, f):
-        pass  # Implement in subclasses
-
-    def run(self):
-        for f in list_subfolders(self.main_folder, True):
-            if f.endswith("_ignore"): continue
-            t = datetime.strptime(f, EXPERIMENT_DATETIME_STR_FORMAT)  # Folder name specifies the date -> Convert to datetime
-
-            # Filter by experiment date (only consider experiments within t_start and t_end)
-            if self.start_datetime <= t <= self.end_datetime:
-                self.process_subfolder(f)
 
 
 if __name__ == "__main__":

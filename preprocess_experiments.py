@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from read_dataset import read_weights_data
-from aux_tools import str2bool, _min, _max, ensure_folder_exists, list_subfolders, format_axis_as_timedelta, JointEnum, save_datetime_to_h5, EXPERIMENT_DATETIME_STR_FORMAT
+from aux_tools import str2bool, _min, _max, ensure_folder_exists, format_axis_as_timedelta, JointEnum, save_datetime_to_h5, ExperimentTraverser, EXPERIMENT_DATETIME_STR_FORMAT
 from matplotlib import pyplot as plt
 from datetime import datetime
 from multiprocessing import Pool, cpu_count
@@ -159,11 +159,9 @@ def _crop_image(img, center, half_w, half_h):
     return img[y_min:y_max+1, x_min:x_max+1, :]
 
 
-class ExperimentPreProcessor:
+class ExperimentPreProcessor(ExperimentTraverser):
     def __init__(self, main_folder, start_datetime=datetime.min, end_datetime=datetime.max, do_weight=True, do_pose=True, pose_model_folder="openpose-models/", num_processes_weight=cpu_count(), num_processes_vision=3):
-        self.main_folder = main_folder
-        self.start_datetime = start_datetime
-        self.end_datetime = end_datetime
+        super(ExperimentPreProcessor, self).__init__(main_folder, start_datetime, end_datetime)
         self.do_weight = do_weight
         self.do_pose = do_pose
         self.pose_model_folder = pose_model_folder
@@ -189,28 +187,22 @@ class ExperimentPreProcessor:
 
         print("{} tasks done: {}/{} ({:5.2f}%)".format(str_type, n, total, 100*n/total))
 
-    def run(self):
-        # Traverse all subfolders inside the main_folder and dispatch tasks to the pool of workers
-        for f in list_subfolders(self.main_folder, True):
-            if f.endswith("_ignore"): continue
-            t = datetime.strptime(f, EXPERIMENT_DATETIME_STR_FORMAT)  # Folder name specifies the date -> Convert to datetime
+    def process_subfolder(self, f):
+        parent_folder = os.path.join(self.main_folder, f)
 
-            # Filter by experiment date (only consider experiments within t_start and t_end)
-            if self.start_datetime <= t <= self.end_datetime:
-                parent_folder = os.path.join(self.main_folder, f)
+        # Tell the weight preprocessor to merge all weight sensors into a single h5 file
+        if self.do_weight:
+            task_state = self.pool_weight.apply_async(preprocess_weight, (parent_folder,), callback=lambda _: self._task_done_cb(is_weight=True))
+            self.weight_tasks_state.append(task_state)
 
-                # Tell the weight preprocessor to merge all weight sensors into a single h5 file
-                if self.do_weight:
-                    task_state = self.pool_weight.apply_async(preprocess_weight, (parent_folder,), callback=lambda _: self._task_done_cb(is_weight=True))
-                    self.weight_tasks_state.append(task_state)
+        # Tell the pose preprocessor to run pose estimation on every camera video
+        if self.do_pose:
+            for video in glob.glob(os.path.join(parent_folder, "cam*_{}.mp4".format(f))):
+                kwds = {"crop_half_w": 200, "crop_half_h": 200} if os.path.basename(video).startswith("cam4") else {}  # Top-down camera is closer -> Crop bigger window
+                task_state = self.pool_vision.apply_async(preprocess_vision, (video, self.pose_model_folder), kwds, callback=lambda _: self._task_done_cb(is_weight=False))
+                self.vision_tasks_state.append(task_state)
 
-                # Tell the pose preprocessor to run pose estimation on every camera video
-                if self.do_pose:
-                    for video in glob.glob(os.path.join(parent_folder, "cam*_{}.mp4".format(f))):
-                        kwds = {"crop_half_w": 200, "crop_half_h": 200} if os.path.basename(video).startswith("cam4") else {}  # Top-down camera is closer -> Crop bigger window
-                        task_state = self.pool_vision.apply_async(preprocess_vision, (video, self.pose_model_folder), kwds, callback=lambda _: self._task_done_cb(is_weight=False))
-                        self.vision_tasks_state.append(task_state)
-
+    def on_done(self):
         print("Preprocessing tasks enqueued, waiting for them to complete!")
         for tasks_state in (self.weight_tasks_state, self.vision_tasks_state):
             for i,task_state in enumerate(tasks_state):
