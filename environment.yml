@@ -44,11 +44,13 @@ dependencies:
   - ncurses=6.1=h0a44026_1002
   - nettle=3.4.1=h3efe00b_1002
   - numpy=1.16.3=py37hdf140aa_0
+  - olefile=0.46=py_0
   - openblas=0.3.6=hd44dcd8_2
   - opencv=4.1.0=py37h0cb0d9f_3
   - openh264=1.8.0=hd9629dc_1000
   - openssl=1.1.1b=h01d97ff_2
   - pcre=8.41=h0a44026_1003
+  - pillow=6.0.0=py37h7095ceb_0
   - pip=19.1=py37_0
   - pixman=0.34.0=h1de35cc_1003
   - protobuf=3.7.1=py37h6de7cb9_0
@@ -57,7 +59,7 @@ dependencies:
   - python-dateutil=2.8.0=py_0
   - pytz=2019.1=py_0
   - readline=7.0=hcfe32e1_1001
-  - scipy=1.3.0=py37h7a5a08d_0
+  - scipy=1.3.0=py37hab3da7d_0
   - setuptools=41.0.1=py37_0
   - six=1.12.0=py37_1000
   - sqlite=3.26.0=h1765d9f_1001
