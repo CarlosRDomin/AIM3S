@@ -1,7 +1,6 @@
 from threading import Event
 from generate_video import generate_multicam_video
-from preprocess_experiments import DATETIME_FORMAT
-from aux_tools import list_subfolders, str2bool, str_to_datetime, date_range, time_to_float, format_axis_as_timedelta, plt_fig_to_cv2_img
+from aux_tools import str2bool, str_to_datetime, date_range, time_to_float, format_axis_as_timedelta, ExperimentTraverser, EXPERIMENT_DATETIME_STR_FORMAT
 from datetime import datetime, timedelta
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -82,7 +81,8 @@ class VideoAndWeightHandler:
 
             # update_xaxis=False means weight's xaxis will be static (always show: -0:03 -0:02 ... 0:03)
             # update_xaxis=True means we'll rerender the xaxis on every replot -> Need to hide the labels before copying the canvas bgnd
-            ax[i,0].tick_params(axis='both', which='both', bottom=not self.update_xaxis, labelbottom=not self.update_xaxis)
+            if self.update_xaxis:
+                ax[i,0].tick_params(axis='x', which='both', bottom=False, labelbottom=False)
 
         # Render the figure and save background so updating the plot can be much faster (using blit instead of draw)
         self.fig.canvas.draw()
@@ -90,7 +90,7 @@ class VideoAndWeightHandler:
         for i in range(num_subplots):  # Make everything visible again
             for l in ax[i,0].lines: l.set_visible(True)
             is_last = (i == num_subplots-1)
-            ax[i,0].tick_params(axis='both', which='both', bottom=True, labelbottom=is_last)
+            ax[i,0].tick_params(axis='x', which='both', bottom=True, labelbottom=is_last)
 
         # Allocate memory space for a video frame and a downsampled copy
         self.video_img = np.zeros((self.video_dims[0], self.video_dims[1], 3), dtype=np.uint8)
@@ -187,7 +187,9 @@ class VideoAndWeightHandler:
 
 
 class GroundTruthLabelerWindow:
-    DELAY_FPS = 10  # msec
+    VIDEO_AND_WEIGHT_UPDATE_PERIOD = 10  # msec
+    WIN_PAD = 10
+    GRID_PAD = 5.0/2  # 5px between consecutive items in a hor/vert grid (e.g. between video feed and weight plot)
 
     def __init__(self, experiment_base_folder):
         self.weight_to_cam_t_offset = None
@@ -208,10 +210,12 @@ class GroundTruthLabelerWindow:
         # Setup ui
         self.ui = tk.Tk()
         self.ui.title("Ground truth labeler")
-        self.ui.geometry("{}x{}".format(video_canvas_size[1]+weight_canvas_size[1], video_canvas_size[0]+300))  # WxH
+        win_size = np.array((video_canvas_size[1] + weight_canvas_size[1] + 2*self.WIN_PAD + 2*self.GRID_PAD, video_canvas_size[0]+300))
+        win_offs = (np.array((self.ui.winfo_screenwidth(), self.ui.winfo_screenheight())) - win_size)/2
+        self.ui.geometry("{s[0]}x{s[1]}+{o[0]}+{o[1]}".format(s=win_size.astype(int), o=win_offs.astype(int)))
         self.ui.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.ui_container = ttk.Frame(self.ui)
-        self.ui_container.pack(fill='both', expand=True, padx=10, pady=10, ipadx=20)
+        self.ui_container.pack(fill='both', expand=True, padx=self.WIN_PAD, pady=self.WIN_PAD)
 
         # Variables
         self.quantity = tk.IntVar(self.ui, 1)
@@ -222,19 +226,19 @@ class GroundTruthLabelerWindow:
         self.events = []
 
         # Widgets
-        self.canvas_container = ttk.Frame(self.ui)
-        self.canvas_container.grid(column=0, columnspan=6, row=0, in_=self.ui_container)
-        self.video_canvas = tk.Canvas(self.ui, width=video_canvas_size[1], height=video_canvas_size[0])
-        self.video_canvas.grid(column=0, row=0, in_=self.canvas_container)
-        self.canvas_image = self.video_canvas.create_image(0, 0, image=self.video_and_weight.init_tk_img(self.video_canvas), anchor='nw')
+        self.video_and_weight_container = ttk.Frame(self.ui)
+        self.video_and_weight_container.grid(column=0, columnspan=6, row=0, ipady=self.GRID_PAD/2, in_=self.ui_container)
+        self.video_canvas = tk.Canvas(self.ui, width=video_canvas_size[1], height=video_canvas_size[0], highlightthickness=0)
+        self.video_canvas.create_image(0, 0, image=self.video_and_weight.init_tk_img(self.video_canvas), anchor='nw')
+        self.video_canvas.grid(column=0, row=0, ipadx=self.GRID_PAD, in_=self.video_and_weight_container)
         self.weight_canvas = FigureCanvasTkAgg(self.video_and_weight.fig, master=self.ui)
         self.weight_canvas.draw()
-        self.weight_canvas.get_tk_widget().grid(column=1, row=0, in_=self.canvas_container)
+        self.weight_canvas.get_tk_widget().grid(column=1, row=0, in_=self.video_and_weight_container)
         self.lst_events = MultiColumnListbox(column_headers, master=self.ui)
         for i,w in enumerate(column_widths):
             if w > 0:
                 self.lst_events.tree.column(i, width=w, stretch=False)
-        self.lst_events.tree.grid(column=0, columnspan=6, row=1, sticky='nesw', in_=self.ui_container)
+        self.lst_events.tree.grid(column=0, columnspan=6, row=1, pady=self.GRID_PAD, sticky='nesw', in_=self.ui_container)
         num_quantity = tk.Spinbox(self.ui, from_=1, to_=5, width=1, borderwidth=0, textvariable=self.quantity)
         num_quantity.grid(column=0, row=2, rowspan=2, in_=self.ui_container)
         drp_product = tk.OptionMenu(self.ui, self.selected_product, *options)
@@ -280,13 +284,14 @@ class GroundTruthLabelerWindow:
         self._update_time()
 
     def update_canvas(self):
+        # Update video frame and weight plot
         self.video_and_weight.update()
 
         # Check if user pressed Escape
         if self.user_wants_to_exit.is_set():
             self.on_closing()
         else:
-            self.ui.after(self.DELAY_FPS, self.update_canvas)
+            self.ui.after(self.VIDEO_AND_WEIGHT_UPDATE_PERIOD, self.update_canvas)
 
     def on_closing(self):
         # Save state of the events list before destroying
@@ -340,48 +345,37 @@ class GroundTruthLabelerWindow:
         self._set_time(False)
 
 
-class GroundTruthLabeler:
-    def __init__(self, main_folder, start_datetime=datetime.min, end_datetime=datetime.max):
-        self.main_folder = main_folder
-        self.start_datetime = start_datetime
-        self.end_datetime = end_datetime
+class GroundTruthLabeler(ExperimentTraverser):
+    def process_subfolder(self, f):
+        experiment_folder = os.path.join(self.main_folder, f)
+        ground_truth_file = os.path.join(experiment_folder, "ground_truth.json")
+        if os.path.exists(ground_truth_file):
+            print("Video already annotated!! Skipping (delete '{}' and run this tool again if you want to overwrite)".format(ground_truth_file))
+            return
 
-    def run(self):
-        for f in list_subfolders(self.main_folder, True):
-            if f.endswith("_ignore"): continue
-            t = datetime.strptime(f, DATETIME_FORMAT)  # Folder name specifies the date -> Convert to datetime
-
-            # Filter by experiment date (only consider experiments within t_start and t_end)
-            if self.start_datetime <= t <= self.end_datetime:
-                experiment_folder = os.path.join(self.main_folder, f)
-                ground_truth_file = os.path.join(experiment_folder, "ground_truth.json")
-                if os.path.exists(ground_truth_file):
-                    print("Video already annotated!! Skipping (delete '{}' and run this tool again if you want to overwrite)".format(ground_truth_file))
-                    continue
-
-                # Open ground truth labeling windows
-                gt_labeler = GroundTruthLabelerWindow(experiment_folder)
-                gt_labeler.run()
-                print("Generate_video finished! Weight-camera time offset manually set as {} ({}s wrt weight's own timestamps)".format(gt_labeler.weight_to_cam_t_offset, gt_labeler.t_offset_float))
-                annotated_events = gt_labeler.events
-                print("Received annotated events: {}".format(annotated_events))
-                with open(ground_truth_file, 'w') as f_gt:
-                    json.dump({
-                        'ground_truth': annotated_events,
-                        'weight_to_cam_t_offset': str(gt_labeler.weight_to_cam_t_offset),
-                        'weight_to_cam_t_offset_float': gt_labeler.t_offset_float,
-                    }, f_gt, indent=2)
-                print("Ground truth annotation saved as '{}'!".format(ground_truth_file))
+        # Open ground truth labeling windows
+        gt_labeler = GroundTruthLabelerWindow(experiment_folder)
+        gt_labeler.run()
+        print("Generate_video finished! Weight-camera time offset manually set as {} ({}s wrt weight's own timestamps)".format(gt_labeler.weight_to_cam_t_offset, gt_labeler.t_offset_float))
+        annotated_events = gt_labeler.events
+        print("Received annotated events: {}".format(annotated_events))
+        with open(ground_truth_file, 'w') as f_gt:
+            json.dump({
+                'ground_truth': annotated_events,
+                'weight_to_cam_t_offset': str(gt_labeler.weight_to_cam_t_offset),
+                'weight_to_cam_t_offset_float': gt_labeler.t_offset_float,
+            }, f_gt, indent=2)
+        print("Ground truth annotation saved as '{}'!".format(ground_truth_file))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("folder", default="Dataset/Evaluation", help="Folder containing the experiment to visualize")
-    parser.add_argument("-s", "--start-datetime", default="", help="Only preprocess experiments collected later than this datetime (format: {}; empty for no limit)".format(DATETIME_FORMAT))
-    parser.add_argument("-e", "--end-datetime", default="", help="Only preprocess experiments collected before this datetime (format: {}; empty for no limit)".format(DATETIME_FORMAT))
+    parser.add_argument("-s", "--start-datetime", default="", help="Only preprocess experiments collected later than this datetime (format: {}; empty for no limit)".format(EXPERIMENT_DATETIME_STR_FORMAT))
+    parser.add_argument("-e", "--end-datetime", default="", help="Only preprocess experiments collected before this datetime (format: {}; empty for no limit)".format(EXPERIMENT_DATETIME_STR_FORMAT))
     args = parser.parse_args()
 
-    t_start = datetime.strptime(args.start_datetime, DATETIME_FORMAT) if len(args.start_datetime) > 0 else datetime.min
-    t_end = datetime.strptime(args.end_datetime, DATETIME_FORMAT) if len(args.end_datetime) > 0 else datetime.max
+    t_start = datetime.strptime(args.start_datetime, EXPERIMENT_DATETIME_STR_FORMAT) if len(args.start_datetime) > 0 else datetime.min
+    t_end = datetime.strptime(args.end_datetime, EXPERIMENT_DATETIME_STR_FORMAT) if len(args.end_datetime) > 0 else datetime.max
 
     GroundTruthLabeler(args.folder, t_start, t_end).run()
