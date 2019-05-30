@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from read_dataset import read_weights_data
-from aux_tools import str2bool, _min, _max, ensure_folder_exists, list_subfolders, format_axis_as_timedelta, JointEnum, save_datetime_to_h5
+from aux_tools import str2bool, _min, _max, ensure_folder_exists, list_subfolders, format_axis_as_timedelta, JointEnum, save_datetime_to_h5, EXPERIMENT_DATETIME_STR_FORMAT
 from matplotlib import pyplot as plt
 from datetime import datetime
 from multiprocessing import Pool, cpu_count
@@ -34,7 +34,6 @@ class BackgroundSubtractor:
         return self.runGSOC(frame)
 
 
-DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"
 HDF5_FRAME_NAME_FORMAT = "frame{:05d}"
 HDF5_POSE_GROUP_NAME = "pose"
 HDF5_HANDS_GROUP_NAME = "hands"
@@ -194,7 +193,7 @@ class ExperimentPreProcessor:
         # Traverse all subfolders inside the main_folder and dispatch tasks to the pool of workers
         for f in list_subfolders(self.main_folder, True):
             if f.endswith("_ignore"): continue
-            t = datetime.strptime(f, DATETIME_FORMAT)  # Folder name specifies the date -> Convert to datetime
+            t = datetime.strptime(f, EXPERIMENT_DATETIME_STR_FORMAT)  # Folder name specifies the date -> Convert to datetime
 
             # Filter by experiment date (only consider experiments within t_start and t_end)
             if self.start_datetime <= t <= self.end_datetime:
@@ -225,8 +224,8 @@ class ExperimentPreProcessor:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("folder", default="Dataset/Evaluation", help="Folder containing the experiment(s) to preprocess")
-    parser.add_argument("-s", "--start-datetime", default="", help="Only preprocess experiments collected later than this datetime (format: {}; empty for no limit)".format(DATETIME_FORMAT))
-    parser.add_argument("-e", "--end-datetime", default="", help="Only preprocess experiments collected before this datetime (format: {}; empty for no limit)".format(DATETIME_FORMAT))
+    parser.add_argument("-s", "--start-datetime", default="", help="Only preprocess experiments collected later than this datetime (format: {}; empty for no limit)".format(EXPERIMENT_DATETIME_STR_FORMAT))
+    parser.add_argument("-e", "--end-datetime", default="", help="Only preprocess experiments collected before this datetime (format: {}; empty for no limit)".format(EXPERIMENT_DATETIME_STR_FORMAT))
     parser.add_argument('-w', "--do-weight", default=True, type=str2bool, help="Whether or not to pre-process weight")
     parser.add_argument('-p', "--do-pose", default=True, type=str2bool, help="Whether or not to pre-process human pose")
     parser.add_argument('-pm', "--pose-model-folder", default="openpose-models/", help="Human pose model folder location (can be a symlink)")
@@ -234,8 +233,8 @@ if __name__ == "__main__":
     parser.add_argument('-nv', "--num-processes-vision", default=3, type=int, help="Number of processes to spawn for vision preprocessing")
     args = parser.parse_args()
 
-    t_start = datetime.strptime(args.start_datetime, DATETIME_FORMAT) if len(args.start_datetime) > 0 else datetime.min
-    t_end = datetime.strptime(args.end_datetime, DATETIME_FORMAT) if len(args.end_datetime) > 0 else datetime.max
+    t_start = datetime.strptime(args.start_datetime, EXPERIMENT_DATETIME_STR_FORMAT) if len(args.start_datetime) > 0 else datetime.min
+    t_end = datetime.strptime(args.end_datetime, EXPERIMENT_DATETIME_STR_FORMAT) if len(args.end_datetime) > 0 else datetime.max
 
     ExperimentPreProcessor(args.folder, t_start, t_end, args.do_weight, args.do_pose, args.pose_model_folder, args.num_processes_weight, args.num_processes_vision).run()
 

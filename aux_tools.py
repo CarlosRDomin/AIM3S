@@ -4,6 +4,7 @@ import argparse
 import pytz
 import os
 from enum import Enum
+from datetime import datetime
 from dateutil import parser as dateparser
 
 # Python 2-3 compatibility
@@ -15,6 +16,7 @@ if sys.version_info.major < 3:
 # Aux constants & enums
 DEFAULT_TIMEZONE = pytz.timezone('America/Los_Angeles')
 DATETIME_STR_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
+EXPERIMENT_DATETIME_STR_FORMAT = "%Y-%m-%d_%H-%M-%S"
 
 class JointEnum(Enum):
     NOSE = 0
@@ -194,6 +196,25 @@ class HSVthreshHelper:
                 break
 
         cv2.destroyAllWindows()
+
+
+class ExperimentTraverser:
+    def __init__(self, main_folder, start_datetime=datetime.min, end_datetime=datetime.max):
+        self.main_folder = main_folder
+        self.start_datetime = start_datetime
+        self.end_datetime = end_datetime
+
+    def process_subfolder(self, f):
+        pass  # Implement in subclasses
+
+    def run(self):
+        for f in list_subfolders(self.main_folder, True):
+            if f.endswith("_ignore"): continue
+            t = datetime.strptime(f, EXPERIMENT_DATETIME_STR_FORMAT)  # Folder name specifies the date -> Convert to datetime
+
+            # Filter by experiment date (only consider experiments within t_start and t_end)
+            if self.start_datetime <= t <= self.end_datetime:
+                self.process_subfolder(f)
 
 
 if __name__ == "__main__":
