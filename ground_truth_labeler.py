@@ -27,6 +27,56 @@ except ImportError:  # Python 3
 from MultiColumnListbox import MultiColumnListbox
 
 
+class ResizableImageCanvas(tk.Canvas):
+    def __init__(self, preserve_aspect_ratio=True, *args, **kwargs):
+        super(ResizableImageCanvas, self).__init__(*args, **kwargs)
+        self.preserve_aspect_ratio = preserve_aspect_ratio
+
+        self.bind("<Configure>", self.on_resize)
+        self.img = None
+        self.tk_img = None
+        self.tk_img_size = (0, 0)
+        self.canvas_img = None
+        self.canvas_size = np.array((self.winfo_width(), self.winfo_height()), dtype=float)
+
+    def _fit(self, dims):  # Fit an image inside the canvas and return its dimensions
+        dims = np.array(dims, dtype=float)
+
+        if self.preserve_aspect_ratio:
+            scale_wh = self.canvas_size/dims
+            scale = scale_wh.min()
+            return scale * dims
+        else:
+            return self.canvas_size
+
+    def update_image(self, cv2_img):
+        # Resize cv2_img and create a PIL.Image from it
+        img_dims = np.array(cv2_img.shape[1::-1])
+        cv2_img_resized = cv2.resize(cv2_img, tuple(self._fit(img_dims).astype(int)))
+        cv2.cvtColor(cv2_img_resized, cv2.COLOR_BGR2RGB, cv2_img_resized)
+        self.img = Image.fromarray(cv2_img_resized)
+
+        # If the rescaled image has different size than self.tk_img, create a new self.tk_img with correct size (pastes the image too), otherwise just update the image
+        if np.any(self.img.size != self.tk_img_size):
+            self.resize_canvas_img(self.img.size)
+        else:
+            self.tk_img.paste(self.img)
+
+    def resize_canvas_img(self, img_size):
+        # Delete old image if needed
+        if self.canvas_img:
+            self.delete(self.canvas_img)
+
+        self.tk_img_size = np.array(img_size, dtype=int)
+        self.tk_img = ImageTk.PhotoImage(master=self, width=self.tk_img_size[0], height=self.tk_img_size[1], image=self.img.resize(self.tk_img_size) if self.img is not None else "RGB")
+        self.canvas_img = self.create_image(self.canvas_size[0]//2, self.canvas_size[1]//2, image=self.tk_img)
+
+    def on_resize(self, event):
+        self.canvas_size = np.array((event.width, event.height), dtype=float)  # Update new canvas size
+        img_size = self._fit(self.img.size) if self.img is not None else self.canvas_size  # Find the image size that fits inside
+        self.resize_canvas_img(img_size)  # Resize image
+
+
 class VideoAndWeightHandler:
     TIME_INCREMENT = timedelta(seconds=0.1)  # How much to shift the time offset cameras-weights from keyboard input (ASDW)
     FRAME_INCREMENT = 8  # How many frames to skip forward/backward on keyboard input (arrow keys)
@@ -41,9 +91,12 @@ class VideoAndWeightHandler:
         self.refresh_weight = True
         self.do_skip_frames = False
         self.t_lims = 3  # How many seconds of weight to show on either side of curr_t
-        self.out_scale = 0.5  # Rescale video_img before converting to Tkinter image (~3X faster to render)
+        self.initial_scale = 0.5  # Rescale video_img before converting to Tkinter image (~3X faster to render)
         self.keys_pressed = Queue()
-        self.tk_img = None
+        self.video_canvas = None
+        self.video_tk_img = None
+        self.weight_canvas = None
+        self.bg_cache = None
 
         # Load video info
         video_in_filename = generate_multicam_video(experiment_base_folder)
@@ -51,8 +104,8 @@ class VideoAndWeightHandler:
         with h5py.File(os.path.splitext(video_in_filename)[0] + ".h5", 'r') as h5_cam:
             self.t_cam = np.array(list(date_range(str_to_datetime(h5_cam.attrs['t_start']), str_to_datetime(h5_cam.attrs['t_end']), timedelta(seconds=1.0/h5_cam.attrs['fps']))))
         self.video_dims = np.array([self.video_in.get(cv2.CAP_PROP_FRAME_HEIGHT), self.video_in.get(cv2.CAP_PROP_FRAME_WIDTH)]).astype(int)
-        self.video_downsampled_dims = (self.out_scale * self.video_dims).astype(int)
-        self.weight_dims = np.array([self.video_downsampled_dims[0], 350]).astype(int)
+        self.video_initial_dims = (self.initial_scale * self.video_dims).astype(int)
+        self.weight_dims = np.array([self.video_initial_dims[0], 350]).astype(int)
 
         # Read all weight sensors for the full experiment duration at once
         t_experiment_start = experiment_base_folder.rsplit('/', 1)[-1]  # Last folder in the path should indicate time at which experiment started
@@ -73,32 +126,45 @@ class VideoAndWeightHandler:
         for i in range(num_subplots):
             shelf_i = num_subplots - (i+1)  # Shelf 1 is at the bottom
             # Plot weight and a vertical line at currT. Draw invisible: we'll copy the canvas bgnd, then make it visible
-            ax[i,0].plot(t_w, w[shelf_i], visible=False)
-            self.curr_t_lines.append(ax[i,0].axvline(0, linestyle='--', color='black', linewidth=1, visible=False))
+            ax[i,0].plot(t_w, w[shelf_i])
+            self.curr_t_lines.append(ax[i,0].axvline(0, linestyle='--', color='black', linewidth=1))
             ax[i,0].set_title('Shelf {}'.format(shelf_i+1))
             ax[i,0].set_xlim(-self.t_lims, self.t_lims)
             format_axis_as_timedelta(ax[i,0].xaxis)
 
-            # update_xaxis=False means weight's xaxis will be static (always show: -0:03 -0:02 ... 0:03)
-            # update_xaxis=True means we'll rerender the xaxis on every replot -> Need to hide the labels before copying the canvas bgnd
             if self.update_xaxis:
                 ax[i,0].tick_params(axis='x', which='both', bottom=False, labelbottom=False)
 
         # Render the figure and save background so updating the plot can be much faster (using blit instead of draw)
-        self.fig.canvas.draw()
-        self.bg_cache = self.fig.canvas.copy_from_bbox(self.fig.bbox)
-        for i in range(num_subplots):  # Make everything visible again
-            for l in ax[i,0].lines: l.set_visible(True)
-            is_last = (i == num_subplots-1)
-            ax[i,0].tick_params(axis='x', which='both', bottom=True, labelbottom=is_last)
+        self.update_bg_cache()
 
         # Allocate memory space for a video frame and a downsampled copy
         self.video_img = np.zeros((self.video_dims[0], self.video_dims[1], 3), dtype=np.uint8)
-        self.video_downsampled_img = np.zeros((self.video_downsampled_dims[0], self.video_downsampled_dims[1], 3), dtype=np.uint8) if self.out_scale != 1 else None
 
-    def init_tk_img(self, master=None):
-        self.tk_img = ImageTk.PhotoImage(master=master, width=self.video_downsampled_dims[1], height=self.video_downsampled_dims[0], image="RGB")
-        return self.tk_img
+    def update_bg_cache(self, resize_event=None):
+        if resize_event is not None:
+            self.weight_canvas.resize(resize_event)  # Forward event to figure canvas so it resizes the figure
+        axes = self.fig.get_axes()
+
+        def set_visibility(is_visible):
+            for i, ax in enumerate(axes):
+                for l in ax.lines:
+                    l.set_visible(is_visible)
+                    if is_visible: ax.draw_artist(l)  # Will need to rerender
+
+                # update_xaxis=False means weight's xaxis will be static (always show: -0:03 -0:02 ... 0:03)
+                # update_xaxis=True means we'll rerender the xaxis on every replot -> Need to hide the labels before copying the canvas bgnd
+                if self.update_xaxis:
+                    is_last = (i == len(axes)-1)
+                    ax.tick_params(axis='x', which='both', bottom=is_visible, labelbottom=is_last and is_visible)
+                    if is_visible: ax.draw_artist(ax.xaxis)
+
+        set_visibility(False)  # Make axes and lines invisible
+        self.fig.canvas.draw()  # Rerender full figure
+        self.bg_cache = self.fig.canvas.copy_from_bbox(self.fig.bbox)  # Copy the whole canvas
+        set_visibility(True)  # Make everything visible again
+        self.fig.canvas.blit()  # Rerender only necessary parts
+
 
     def update(self):
         # Update video frame (if needed)
@@ -110,12 +176,7 @@ class VideoAndWeightHandler:
             print("Read frame {} out of {} frames ({:6.2f}%)".format(self.n+1, len(self.t_cam), 100.0*(self.n+1)/len(self.t_cam)))
 
             # Render the frame
-            if self.video_downsampled_img is not None:
-                img = cv2.resize(self.video_img, tuple(self.video_downsampled_dims[::-1]), self.video_downsampled_img)
-            else:
-                img = self.video_img
-            cv2.cvtColor(img, cv2.COLOR_BGR2RGB, img)
-            self.tk_img.paste(Image.fromarray(img))
+            self.video_canvas.update_image(self.video_img)
 
         # Update weight plot (if needed)
         if self.refresh_weight:
@@ -186,18 +247,19 @@ class VideoAndWeightHandler:
         self.refresh_weight = self.refresh_weight or not self.is_paused
 
 
-class GroundTruthLabelerWindow:
+class GroundTruthLabelerWindow(tk.Tk):
     VIDEO_AND_WEIGHT_UPDATE_PERIOD = 10  # msec
     WIN_PAD = 10
-    GRID_PAD = 5.0/2  # 5px between consecutive items in a hor/vert grid (e.g. between video feed and weight plot)
+    GRID_PAD = 3  # 3px between consecutive items in a hor/vert grid (e.g. between video feed and weight plot)
 
     def __init__(self, experiment_base_folder):
+        super(GroundTruthLabelerWindow, self).__init__()
         self.weight_to_cam_t_offset = None
         self.t_offset_float = 0
         self.user_wants_to_exit = Event()
 
         self.video_and_weight = VideoAndWeightHandler(experiment_base_folder, self.on_set_event_time_start_or_end, self.user_wants_to_exit)
-        video_canvas_size = self.video_and_weight.video_downsampled_dims
+        video_canvas_size = self.video_and_weight.video_initial_dims
         weight_canvas_size = self.video_and_weight.weight_dims
 
         # Load product info
@@ -208,69 +270,73 @@ class GroundTruthLabelerWindow:
         column_widths = (186, 186, 50, 48, -1, 55)
 
         # Setup ui
-        self.ui = tk.Tk()
-        self.ui.title("Ground truth labeler")
+        self.title("Ground truth labeler")
         win_size = np.array((video_canvas_size[1] + weight_canvas_size[1] + 2*self.WIN_PAD + 2*self.GRID_PAD, video_canvas_size[0]+300))
-        win_offs = (np.array((self.ui.winfo_screenwidth(), self.ui.winfo_screenheight())) - win_size)/2
-        self.ui.geometry("{s[0]}x{s[1]}+{o[0]}+{o[1]}".format(s=win_size.astype(int), o=win_offs.astype(int)))
-        self.ui.protocol("WM_DELETE_WINDOW", self.on_closing)
-        self.ui_container = ttk.Frame(self.ui)
+        win_offs = (np.array((self.winfo_screenwidth(), self.winfo_screenheight())) - win_size)/2
+        self.geometry("{s[0]}x{s[1]}+{o[0]}+{o[1]}".format(s=win_size.astype(int), o=win_offs.astype(int)))
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.ui_container = tk.Frame(self)
         self.ui_container.pack(fill='both', expand=True, padx=self.WIN_PAD, pady=self.WIN_PAD)
 
         # Variables
-        self.quantity = tk.IntVar(self.ui, 1)
-        self.selected_product = tk.Variable(self.ui, options[0])
-        self.is_pickup = tk.BooleanVar(self.ui, True)
+        self.quantity = tk.IntVar(self, 1)
+        self.selected_product = tk.Variable(self, options[0])
+        self.is_pickup = tk.BooleanVar(self, True)
         self.t_start = None
         self.t_end = None
         self.events = []
 
         # Widgets
-        self.video_and_weight_container = ttk.Frame(self.ui)
-        self.video_and_weight_container.grid(column=0, columnspan=6, row=0, ipady=self.GRID_PAD/2, in_=self.ui_container)
-        self.video_canvas = tk.Canvas(self.ui, width=video_canvas_size[1], height=video_canvas_size[0], highlightthickness=0)
-        self.video_canvas.create_image(0, 0, image=self.video_and_weight.init_tk_img(self.video_canvas), anchor='nw')
-        self.video_canvas.grid(column=0, row=0, ipadx=self.GRID_PAD, in_=self.video_and_weight_container)
-        self.weight_canvas = FigureCanvasTkAgg(self.video_and_weight.fig, master=self.ui)
+        self.video_and_weight_container = tk.Frame(self)
+        self.video_and_weight_container.grid(column=0, columnspan=6, row=0, sticky='nesw', ipady=self.GRID_PAD/2, in_=self.ui_container)
+        self.video_canvas = ResizableImageCanvas(master=self, width=video_canvas_size[1], height=video_canvas_size[0], highlightthickness=0)
+        self.video_canvas.grid(column=0, row=0, sticky='nesw', in_=self.video_and_weight_container)
+        self.weight_canvas = FigureCanvasTkAgg(self.video_and_weight.fig, master=self)
         self.weight_canvas.draw()
-        self.weight_canvas.get_tk_widget().grid(column=1, row=0, in_=self.video_and_weight_container)
-        self.lst_events = MultiColumnListbox(column_headers, master=self.ui)
+        self.weight_canvas.get_tk_widget().grid(column=1, row=0, sticky='ns', padx=(self.WIN_PAD, 0), in_=self.video_and_weight_container)
+        self.weight_canvas.get_tk_widget().bind("<Configure>", self.video_and_weight.update_bg_cache)
+        self.video_and_weight.video_canvas = self.video_canvas
+        self.video_and_weight.weight_canvas = self.weight_canvas
+        self.lst_events = MultiColumnListbox(column_headers, master=self)
         for i,w in enumerate(column_widths):
             if w > 0:
                 self.lst_events.tree.column(i, width=w, stretch=False)
         self.lst_events.tree.grid(column=0, columnspan=6, row=1, pady=self.GRID_PAD, sticky='nesw', in_=self.ui_container)
-        num_quantity = tk.Spinbox(self.ui, from_=1, to_=5, width=1, borderwidth=0, textvariable=self.quantity)
+        num_quantity = tk.Spinbox(self, from_=1, to_=5, width=1, borderwidth=0, textvariable=self.quantity)
         num_quantity.grid(column=0, row=2, rowspan=2, in_=self.ui_container)
-        drp_product = tk.OptionMenu(self.ui, self.selected_product, *options)
+        drp_product = tk.OptionMenu(self, self.selected_product, *options)
         drp_product.grid(column=1, row=2, rowspan=2, sticky='ew', ipadx=10, in_=self.ui_container)
-        opt_pickup = tk.Radiobutton(self.ui, text="Pick up", variable=self.is_pickup, value=True)
+        opt_pickup = tk.Radiobutton(self, text="Pick up", variable=self.is_pickup, value=True)
         opt_pickup.grid(column=2, row=2, sticky='ew', ipadx=10, in_=self.ui_container)
-        opt_pickup = tk.Radiobutton(self.ui, text="Put back", variable=self.is_pickup, value=False)
+        opt_pickup = tk.Radiobutton(self, text="Put back", variable=self.is_pickup, value=False)
         opt_pickup.grid(column=2, row=3, sticky='ew', ipadx=0, in_=self.ui_container)
-        tk.Label(self.ui, text="Start:").grid(column=3, row=2, sticky='nsew', in_=self.ui_container)
-        tk.Label(self.ui, text="End:").grid(column=3, row=3, sticky='nsew', in_=self.ui_container)
-        self.txt_t_start = tk.Text(self.ui, state=tk.DISABLED, height=1, width=26)
+        tk.Label(self, text="Start:").grid(column=3, row=2, sticky='nsew', in_=self.ui_container)
+        tk.Label(self, text="End:").grid(column=3, row=3, sticky='nsew', in_=self.ui_container)
+        self.txt_t_start = tk.Text(self, state=tk.DISABLED, height=1, width=26)
         self.txt_t_start.grid(column=4, row=2, sticky='nsew', in_=self.ui_container)
-        self.txt_t_end = tk.Text(self.ui, state=tk.DISABLED, height=1, width=26)
+        self.txt_t_end = tk.Text(self, state=tk.DISABLED, height=1, width=26)
         self.txt_t_end.grid(column=4, row=3, sticky='nsew', in_=self.ui_container)
         self._update_time()  # Initialize their text
-        btn_add_event = tk.Button(self.ui, text="Add event", command=self.add_event)
+        btn_add_event = tk.Button(self, text="Add event", command=self.add_event)
         btn_add_event.grid(column=5, row=2, rowspan=2, in_=self.ui_container)
 
         # Event handling
-        self.ui.bind('<KeyPress>', self.video_and_weight.keys_pressed.put)
+        self.bind('<KeyPress>', self.video_and_weight.keys_pressed.put)
         self.lst_events.tree.bind('<KeyPress>', self.remove_event)
 
         # Make grids expandable on window resize
+        self.ui_container.grid_rowconfigure(0, weight=1)
         self.ui_container.grid_rowconfigure(1, weight=1)
         self.ui_container.grid_columnconfigure(1, weight=1)
+        self.video_and_weight_container.grid_columnconfigure(0, weight=1)
+        self.video_and_weight_container.grid_rowconfigure(0, weight=1)
 
         # Load the first image
         self.update_canvas()
 
     def run(self):
         # Run main loop
-        self.ui.mainloop()
+        self.mainloop()
 
         # Save final offset values
         self.weight_to_cam_t_offset = self.video_and_weight.weight_to_cam_t_offset
@@ -291,7 +357,7 @@ class GroundTruthLabelerWindow:
         if self.user_wants_to_exit.is_set():
             self.on_closing()
         else:
-            self.ui.after(self.VIDEO_AND_WEIGHT_UPDATE_PERIOD, self.update_canvas)
+            self.after(self.VIDEO_AND_WEIGHT_UPDATE_PERIOD, self.update_canvas)
 
     def on_closing(self):
         # Save state of the events list before destroying
@@ -306,7 +372,7 @@ class GroundTruthLabelerWindow:
         } for event in events_info]
 
         if messagebox.askokcancel("Exit?", "Are you sure you're done annotating this experiment's ground truth?\nWe've registered {} event{}".format(len(self.events), '' if len(self.events)==1 else 's')):
-            self.ui.destroy()
+            self.destroy()
 
     def add_event(self):
         prod_id, prod_name = self.selected_product.get()
