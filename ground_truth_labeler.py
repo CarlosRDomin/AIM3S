@@ -39,11 +39,14 @@ class ResizableImageCanvas(tk.Canvas):
         self.canvas_img = None
         self.canvas_size = np.array((self.winfo_width(), self.winfo_height()), dtype=float)
 
+    def get_canvas_size(self):
+        return np.array((self.winfo_width(), self.winfo_height()), dtype=float)
+
     def _fit(self, dims):  # Fit an image inside the canvas and return its dimensions
         dims = np.array(dims, dtype=float)
 
         if self.preserve_aspect_ratio:
-            scale_wh = self.canvas_size/dims
+            scale_wh = self.get_canvas_size()/dims
             scale = scale_wh.min()
             return scale * dims
         else:
