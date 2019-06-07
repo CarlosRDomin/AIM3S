@@ -1,6 +1,8 @@
 ## Installation instructions
 
-You have two options:
+First, you'll need to install `conda` ([Miniconda3](https://docs.conda.io/en/latest/miniconda.html) recommended)
+
+Then, you have two options:
  1. Install from environment.yml:
     ```bash
     conda env create -f environment.yml
