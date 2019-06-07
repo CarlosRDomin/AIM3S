@@ -16,13 +16,9 @@ import argparse
 # Import UI
 try:
     import Tkinter as tk
-    import tkFont
-    import ttk
     import tkMessageBox as messagebox
 except ImportError:  # Python 3
     import tkinter as tk
-    import tkinter.font as tkFont
-    import tkinter.ttk as ttk
     from tkinter import messagebox
 from MultiColumnListbox import MultiColumnListbox
 
@@ -304,7 +300,7 @@ class GroundTruthLabelerWindow(tk.Tk):
         for i,w in enumerate(column_widths):
             if w > 0:
                 self.lst_events.tree.column(i, width=w, stretch=False)
-        self.lst_events.tree.grid(column=0, columnspan=6, row=1, pady=self.GRID_PAD, sticky='nesw', in_=self.ui_container)
+        self.lst_events.container.grid(column=0, columnspan=6, row=1, pady=self.GRID_PAD, sticky='nesw', in_=self.ui_container)
         num_quantity = tk.Spinbox(self, from_=1, to_=5, width=1, borderwidth=0, textvariable=self.quantity)
         num_quantity.grid(column=0, row=2, rowspan=2, in_=self.ui_container)
         drp_product = tk.OptionMenu(self, self.selected_product, *options)
@@ -440,8 +436,8 @@ class GroundTruthLabeler(ExperimentTraverser):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("folder", default="Dataset/Evaluation", help="Folder containing the experiment to visualize")
-    parser.add_argument("-s", "--start-datetime", default="", help="Only preprocess experiments collected later than this datetime (format: {}; empty for no limit)".format(EXPERIMENT_DATETIME_STR_FORMAT))
-    parser.add_argument("-e", "--end-datetime", default="", help="Only preprocess experiments collected before this datetime (format: {}; empty for no limit)".format(EXPERIMENT_DATETIME_STR_FORMAT))
+    parser.add_argument("-s", "--start-datetime", default="", help="Only annotate experiments collected later than this datetime (format: {}; empty for no limit)".format(EXPERIMENT_DATETIME_STR_FORMAT))
+    parser.add_argument("-e", "--end-datetime", default="", help="Only annotate experiments collected before this datetime (format: {}; empty for no limit)".format(EXPERIMENT_DATETIME_STR_FORMAT))
     args = parser.parse_args()
 
     t_start = datetime.strptime(args.start_datetime, EXPERIMENT_DATETIME_STR_FORMAT) if len(args.start_datetime) > 0 else datetime.min

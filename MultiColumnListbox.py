@@ -12,23 +12,22 @@ class MultiColumnListbox(object):
     """Use a ttk.TreeView as a multicolumn ListBox"""
 
     def __init__(self, headers, data=None, sortable=True, scrollbars_on_overflow=False, autowidth_on_add=False, master=None, **kw):
-        if scrollbars_on_overflow:
-            container = ttk.Frame(master)
-            container.pack(fill='both', expand=True)
+        self.container = tk.Frame(master)
+        self.container.pack(fill='both', expand=True)
 
         self.tree = ttk.Treeview(master, columns=headers, show="headings", **kw)
 
         if not scrollbars_on_overflow:
-            self.tree.pack(fill='x')
+            self.tree.pack(fill='x', in_=self.container)
         else:
             vsb = ttk.Scrollbar(orient="vertical", command=self.tree.yview)
             hsb = ttk.Scrollbar(orient="horizontal", command=self.tree.xview)
             self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
-            self.tree.grid(column=0, row=0, sticky='nsew', in_=container)
-            vsb.grid(column=1, row=0, sticky='ns', in_=container)
-            hsb.grid(column=0, row=1, sticky='ew', in_=container)
-            container.grid_columnconfigure(0, weight=1)
-            container.grid_rowconfigure(0, weight=1)
+            self.tree.grid(column=0, row=0, sticky='nsew', in_=self.container)
+            vsb.grid(column=1, row=0, sticky='ns', in_=self.container)
+            hsb.grid(column=0, row=1, sticky='ew', in_=self.container)
+            self.container.grid_columnconfigure(0, weight=1)
+            self.container.grid_rowconfigure(0, weight=1)
 
         for iCol,col in enumerate(headers):
             on_sort = (lambda c=iCol: self.sortby(c)) if sortable else ''
