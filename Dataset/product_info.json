@@ -24,6 +24,7 @@
 			"name": "Cuttlery",
 			"barcode": "052548500740",
 			"training_name": "7 Select cutlery luncheon size",
+			"training_id": 42,
 			"arrangement": [
 				{
 					"shelf_id": 5,
@@ -43,6 +44,7 @@
 			"name": "Heavy Duty Aluminium Foil",
 			"barcode": "052548570217",
 			"training_name": "7 Select Heavy Duty Aluminum Foil",
+			"training_id": 39,
 			"arrangement": [
 				{
 					"shelf_id": 5,
@@ -64,6 +66,7 @@
 			"name": "Reynolds Wrap",
 			"barcode": "010900080316",
 			"training_name": "Reynolds Wrap Aluminum Foil",
+			"training_id": 8,
 			"arrangement": [
 				{
 					"shelf_id": 5,
@@ -84,6 +87,7 @@
 			"name": "Cling Wrap",
 			"barcode": "012587000106",
 			"training_name": "Glad Cling Wrap",
+			"training_id": 65,
 			"arrangement": [
 				{
 					"shelf_id": 5,
@@ -105,6 +109,7 @@
 			"name": "Sandwiches bag",
 			"barcode": "052548605131",
 			"training_name": "7 Select Bolsas para sandwich",
+			"training_id": 62,
 			"arrangement": [
 				{
 					"shelf_id": 5,
@@ -127,6 +132,7 @@
 			"name": "Quart Freezer",
 			"barcode": "052548605148",
 			"training_name": "7 Select Bolsas para congelar",
+			"training_id": 32,
 			"arrangement": [
 				{
 					"shelf_id": 5,
@@ -148,6 +154,7 @@
 			"name": "Gallon Freezer",
 			"barcode": "052548009564",
 			"training_name": "7 Select Reclosable Freezer Bags",
+			"training_id": 54,
 			"arrangement": [
 				{
 					"shelf_id": 5,
@@ -169,6 +176,7 @@
 			"name": "Large Drawstring Trash Bags",
 			"barcode": "052548009083",
 			"training_name": "7 Select Large Drawstring Trash Bags",
+			"training_id": 58,
 			"arrangement": [
 				{
 					"shelf_id": 4,
@@ -191,6 +199,7 @@
 			"name": "Flap Tie Lawn & Leaf Bags",
 			"barcode": "052548009090",
 			"training_name": "7 Select Flap Tie Lawn & Leaf Bags",
+			"training_id": 44,
 			"arrangement": [
 				{
 					"shelf_id": 4,
@@ -211,6 +220,7 @@
 			"name": "Tall Kitchen Bags White",
 			"barcode": "052548009096",
 			"training_name": "7 Select Drawstring Tall Kitchen Bags",
+			"training_id": 37,
 			"arrangement": [
 				{
 					"shelf_id": 4,
@@ -232,6 +242,7 @@
 			"name": "Bounty Paper Towels",
 			"barcode": "037000762300",
 			"training_name": "Bounty",
+			"training_id": 17,
 			"arrangement": [
 				{
 					"shelf_id": 3,
@@ -252,6 +263,7 @@
 			"name": "Ultra Premium Paper Towels",
 			"barcode": "052548570682",
 			"training_name": "7 Select Ultra Premium",
+			"training_id": 43,
 			"arrangement": [
 				{
 					"shelf_id": 3,
@@ -274,6 +286,7 @@
 			"name": "Premium paper towels",
 			"barcode": "052548560089",
 			"training_name": "7 Select Premium Paper Towels",
+			"training_id": 24,
 			"arrangement": [
 				{
 					"shelf_id": 3,
@@ -297,6 +310,7 @@
 			"name": "Sanitex Vinyl Gloves",
 			"barcode": "640562023941",
 			"training_name": "Sanitex General Purpose Synthetic Vinyl Gloves",
+			"training_id": 46,
 			"arrangement": [
 				{
 					"shelf_id": 3,
@@ -335,6 +349,7 @@
 			"name": "Scotch Brite Spounge",
 			"barcode": "021200001833",
 			"training_name": "Scotch Brite Non-Scratch Scrub Sponge",
+			"training_id": 45,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -375,6 +390,7 @@
 			"name": "Dawn dish liquid",
 			"barcode": "037000973782",
 			"training_name": "Dawn Original Scent Dishwashing Soap",
+			"training_id": 0,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -394,6 +410,7 @@
 			"name": "7Eleven Dish Liquid",
 			"barcode": "052548588762",
 			"training_name": "7 Select Dish Liquid",
+			"training_id": 27,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -413,6 +430,7 @@
 			"name": "Fabric Febreeze",
 			"barcode": "037000197430",
 			"training_name": "Febreze Fabric",
+			"training_id": 33,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -432,6 +450,7 @@
 			"name": "Glade Clean linen",
 			"barcode": "046500733321",
 			"training_name": "Glade Spray Clean Linen",
+			"training_id": 5,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -450,6 +469,7 @@
 			"name": "Glade scented Candel",
 			"barcode": "046500769597",
 			"training_name": "Glade Candle Sheer Vanilla Embrace",
+			"training_id": 3,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -469,6 +489,7 @@
 			"name": "Lysol spray",
 			"barcode": "019200741859",
 			"training_name": "Lysol Disfectant Spray",
+			"training_id": 15,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -487,6 +508,7 @@
 			"name": "409 Multi-Surface",
 			"barcode": "044600008899",
 			"training_name": "Formula 409 Multi-Surface Cleaner",
+			"training_id": 55,
 			"arrangement": [
 				{
 					"shelf_id": 1,
@@ -506,6 +528,7 @@
 			"name": "Toilet bowl cleaner",
 			"barcode": "052548575496",
 			"training_name": "7 Select Toilet Bowl Cleaner deodorizing",
+			"training_id": 59,
 			"arrangement": [
 				{
 					"shelf_id": 1,
@@ -524,6 +547,7 @@
 			"name": "Lysol Toilet bleach",
 			"barcode": "019200850209",
 			"training_name": "Lysol with Hydrogen Peroxide",
+			"training_id": 28,
 			"arrangement": [
 				{
 					"shelf_id": 1,
@@ -543,6 +567,7 @@
 			"name": "7E Glass Cleaner",
 			"barcode": "052548575489",
 			"training_name": "7 Select Glass Cleaner with ammonia",
+			"training_id": 63,
 			"arrangement": [
 				{
 					"shelf_id": 1,
@@ -562,6 +587,7 @@
 			"name": "Liquid Plumr",
 			"barcode": "044600002217",
 			"training_name": "Liquid Plumr Clog Destroyer",
+			"training_id": 51,
 			"arrangement": [
 				{
 					"shelf_id": 1,
@@ -581,6 +607,7 @@
 			"name": "Lysol all purpose cleaner Lemon",
 			"barcode": "019200753524",
 			"training_name": "Lysol All Purpose Cleaner Lemon Breeze Scent",
+			"training_id": 18,
 			"arrangement": [
 				{
 					"shelf_id": 1,
@@ -600,6 +627,7 @@
 			"name": "Fabuloso Cleaner",
 			"barcode": "035000530639",
 			"training_name": "Fabuloso",
+			"training_id": 29,
 			"arrangement": [
 				{
 					"shelf_id": 1,
@@ -618,6 +646,7 @@
 			"name": "Raid (ANt & Roach remover)",
 			"barcode": "046500216121",
 			"training_name": "Raid Ant & Roach",
+			"training_id": 12,
 			"arrangement": [
 				{
 					"shelf_id": 1,
@@ -656,6 +685,7 @@
 			"name": "Kit Kat King Size",
 			"barcode": "03422900",
 			"training_name": "Kit Kat King Size",
+			"training_id": 40,
 			"arrangement": [
 				{
 					"shelf_id": 8,
@@ -677,6 +707,7 @@
 			"name": "Kit Kat White King Size",
 			"barcode": "03417704",
 			"training_name": "Kit Kat White King Size",
+			"training_id": 57,
 			"arrangement": [
 				{
 					"shelf_id": 8,
@@ -722,6 +753,7 @@
 			"name": "2 Snickers White",
 			"barcode": "040000544470",
 			"training_name": "2 Snickers White",
+			"training_id": 30,
 			"arrangement": [
 				{
 					"shelf_id": 8,
@@ -768,6 +800,7 @@
 			"name": "Peanut Butter M&M's Share Size",
 			"barcode": "04022309",
 			"training_name": "Peanut Butter M&M's Share Size",
+			"training_id": 64,
 			"arrangement": [
 				{
 					"shelf_id": 7,
@@ -811,6 +844,7 @@
 			"name": "Kit Kat Big Kat King Size",
 			"barcode": "034000245222",
 			"training_name": "Kit Kat Big Kat King Size",
+			"training_id": 53,
 			"arrangement": [
 				{
 					"shelf_id": 7,
@@ -834,6 +868,7 @@
 			"name": "Reese's Minis King Size",
 			"barcode": "034000470228",
 			"training_name": "Reese's Minis King Size",
+			"training_id": 34,
 			"arrangement": [
 				{
 					"shelf_id": 7,
@@ -855,6 +890,7 @@
 			"name": "2 Reese's Big Cup King Size",
 			"barcode": "034000430956",
 			"training_name": "Big Cup King Size",
+			"training_id": 13,
 			"arrangement": [
 				{
 					"shelf_id": 7,
@@ -876,6 +912,7 @@
 			"name": "Snickers Bites",
 			"barcode": "04000042252",
 			"training_name": "Snickers Bites",
+			"training_id": 16,
 			"arrangement": [
 				{
 					"shelf_id": 7,
@@ -922,6 +959,7 @@
 			"name": "4 Creamy Snickers Almond Butter",
 			"barcode": "040000542476",
 			"training_name": "Snickers Almond Butter",
+			"training_id": 56,
 			"arrangement": [
 				{
 					"shelf_id": 6,
@@ -943,6 +981,7 @@
 			"name": "Snickers Xtreme",
 			"barcode": "040000494546",
 			"training_name": "Snickers All Nuts & Caramel Xtreme",
+			"training_id": 10,
 			"arrangement": [
 				{
 					"shelf_id": 6,
@@ -964,6 +1003,7 @@
 			"name": "White Creme Reese's King Size",
 			"barcode": "034000480128",
 			"training_name": "Reeses King Size White Cream",
+			"training_id": 38,
 			"arrangement": [
 				{
 					"shelf_id": 6,
@@ -1011,6 +1051,7 @@
 			"name": "Reese's Pieces Big Cup King Size",
 			"barcode": "034000485024",
 			"training_name": "Reese's Pieces Big Cup King Size",
+			"training_id": 36,
 			"arrangement": [
 				{
 					"shelf_id": 6,
@@ -1032,6 +1073,7 @@
 			"name": "4 Snickers Real Peanut Butter",
 			"barcode": "040000441489",
 			"training_name": "Snickers Real Peanute Butter",
+			"training_id": 49,
 			"arrangement": [
 				{
 					"shelf_id": 5,
@@ -1051,6 +1093,7 @@
 			"name": "Cadbury Caramello King Size",
 			"barcode": "03452406",
 			"training_name": "Caramello Cadbury",
+			"training_id": 11,
 			"arrangement": [
 				{
 					"shelf_id": 5,
@@ -1072,6 +1115,7 @@
 			"name": "Reese's Nutrageous King Size",
 			"barcode": "03465303",
 			"training_name": "Reese's Nutrageous",
+			"training_id": 6,
 			"arrangement": [
 				{
 					"shelf_id": 5,
@@ -1106,6 +1150,7 @@
 			"name": "Reese's Big Cup Crunchy",
 			"barcode": "03441507",
 			"training_name": "Reese's Big Cup Crunchy King Size",
+			"training_id": 22,
 			"arrangement": [
 				{
 					"shelf_id": 5,
@@ -1129,6 +1174,7 @@
 			"name": "Reese's Fast Break King Size",
 			"barcode": "03403507",
 			"training_name": "Reese's Fast Break King Size",
+			"training_id": 9,
 			"arrangement": [
 				{
 					"shelf_id": 5,
@@ -1150,6 +1196,7 @@
 			"name": "4 Butterfinger Peanut Butter Cups",
 			"barcode": "02878801",
 			"training_name": "Butterfinger Peanut Butter Cups",
+			"training_id": 23,
 			"arrangement": [
 				{
 					"shelf_id": 4,
@@ -1176,6 +1223,7 @@
 			"name": "Butterfinger 2 piece",
 			"barcode": "099900001477",
 			"training_name": "Butterfinger",
+			"training_id": 35,
 			"arrangement": [
 				{
 					"shelf_id": 4,
@@ -1199,6 +1247,7 @@
 			"name": "Whatchamacallit King Size",
 			"barcode": "03429903",
 			"training_name": "Whatchamacallit King Size",
+			"training_id": 14,
 			"arrangement": [
 				{
 					"shelf_id": 4,
@@ -1221,6 +1270,7 @@
 			"name": "Reece's Pieces King Size",
 			"barcode": "03416501",
 			"training_name": "Reese's Pieces King Size",
+			"training_id": 20,
 			"arrangement": [
 				{
 					"shelf_id": 4,
@@ -1246,6 +1296,7 @@
 			"name": "Peanut M&M's",
 			"barcode": "040000000327",
 			"training_name": "Peanut M&M's",
+			"training_id": 1,
 			"arrangement": [
 				{
 					"shelf_id": 3,
@@ -1267,6 +1318,7 @@
 			"name": "White Chocolate M&M's",
 			"barcode": "040000527152",
 			"training_name": "White Chocolate M&M's",
+			"training_id": 52,
 			"arrangement": [
 				{
 					"shelf_id": 3,
@@ -1289,6 +1341,7 @@
 			"name": "Blue M&M's Caramel",
 			"barcode": "040000508830",
 			"training_name": "M&M's Caramel",
+			"training_id": 25,
 			"arrangement": [
 				{
 					"shelf_id": 3,
@@ -1310,6 +1363,7 @@
 			"name": "Snickers",
 			"barcode": "040000424314",
 			"training_name": "Snickers",
+			"training_id": 26,
 			"arrangement": [
 				{
 					"shelf_id": 3,
@@ -1350,6 +1404,7 @@
 			"name": "2 Peanut Butter Cups Milk Chocolate Reese's",
 			"barcode": "03444009",
 			"training_name": "Reese's Milk Chocolate",
+			"training_id": 7,
 			"arrangement": [
 				{
 					"shelf_id": 3,
@@ -1391,6 +1446,7 @@
 			"name": "Green Crispy M&M's",
 			"barcode": "040000494805",
 			"training_name": "Crispy M&M's",
+			"training_id": 47,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -1413,6 +1469,7 @@
 			"name": "Snickers Peanut Butter Squared",
 			"barcode": "040000394129",
 			"training_name": "Snickers Peanut Butter",
+			"training_id": 41,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -1434,6 +1491,7 @@
 			"name": "Snickers Hazelnut",
 			"barcode": "040000513223",
 			"training_name": "Snickers & Hazelnut",
+			"training_id": 19,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -1453,6 +1511,7 @@
 			"name": "Snickers Almond",
 			"barcode": "04010508",
 			"training_name": "Snickers Almond",
+			"training_id": 61,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -1473,6 +1532,7 @@
 			"name": "PayDay",
 			"barcode": "010700807229",
 			"training_name": "PayDay Peanut Caramel Bar",
+			"training_id": 50,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -1515,6 +1575,7 @@
 			"name": "Reese's Nutrageous",
 			"barcode": "03400500",
 			"training_name": "Reese's Nutrageous",
+			"training_id": 31,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -1535,6 +1596,7 @@
 			"name": "Reece's Sticks",
 			"barcode": "03415201",
 			"training_name": "Reese's Sticks",
+			"training_id": 4,
 			"arrangement": [
 				{
 					"shelf_id": 2,
@@ -1556,6 +1618,7 @@
 			"name": "Skor",
 			"barcode": "03437009",
 			"training_name": "Skor",
+			"training_id": 21,
 			"arrangement": [
 				{
 					"shelf_id": 1,
@@ -1577,6 +1640,7 @@
 			"name": "Rolo",
 			"barcode": "03424403",
 			"training_name": "Rolo",
+			"training_id": 2,
 			"arrangement": [
 				{
 					"shelf_id": 1,
@@ -1596,8 +1660,8 @@
 		{
 			"id": 77,
 			"name": "Cadbury Caramello",
-			"barcode": "03452406",
-			"training_name": "Caramello Cadbury",
+			"barcode": "-",
+			"training_name": "-",
 			"arrangement": [
 				{
 					"shelf_id": 1,
@@ -1666,6 +1730,7 @@
 			"name": "Reese's Pieces",
 			"barcode": "03424801",
 			"training_name": "Reese's Pieces",
+			"training_id": 60,
 			"arrangement": [
 				{
 					"shelf_id": 1,

@@ -42,7 +42,20 @@ def unpack(sensor_data):
     return timestamps, values
 
 
-def parse_weight_calibration(calib_file):
+def parse_product_info(product_info_file=""):
+    import json
+
+    if product_info_file == "":
+        product_info_file = "Dataset/product_info.json"
+
+    # Parse the product info json
+    with open(product_info_file) as f:
+        product_info = json.load(f)
+
+    return product_info['products']
+
+
+def parse_weight_calibration(calib_file=""):
     import json
 
     if calib_file == "":
