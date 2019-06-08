@@ -74,12 +74,9 @@ class VideoAndWeightHandler:
             # Plot weight and a vertical line at currT. Draw invisible: we'll copy the canvas bgnd, then make it visible
             ax[i,0].plot(t_w, w[shelf_i])
             self.curr_t_lines.append(ax[i,0].axvline(0, linestyle='--', color='black', linewidth=1))
-            ax[i,0].set_title('Shelf {}'.format(shelf_i+1))
+            ax[i,0].set_title('Shelf {}'.format(shelf_i+1), fontsize=10, pad=2)
             ax[i,0].set_xlim(-self.t_lims, self.t_lims)
             format_axis_as_timedelta(ax[i,0].xaxis)
-
-            if self.update_xaxis:
-                ax[i,0].tick_params(axis='x', which='both', bottom=False, labelbottom=False)
 
         # Render the figure and save background so updating the plot can be much faster (using blit instead of draw)
         self.update_bg_cache()
@@ -91,6 +88,7 @@ class VideoAndWeightHandler:
         if resize_event is not None:
             self.weight_canvas.resize(resize_event)  # Forward event to figure canvas so it resizes the figure
         axes = self.fig.get_axes()
+        orig_xlims = axes[-1].get_xlim()
 
         def set_visibility(is_visible):
             for i, ax in enumerate(axes):
@@ -102,15 +100,17 @@ class VideoAndWeightHandler:
                 # update_xaxis=True means we'll rerender the xaxis on every replot -> Need to hide the labels before copying the canvas bgnd
                 if self.update_xaxis:
                     is_last = (i == len(axes)-1)
-                    ax.tick_params(axis='x', which='both', bottom=is_visible, labelbottom=is_last and is_visible)
+                    ax.tick_params(axis='x', which="both", bottom=is_visible, labelbottom=is_last and is_visible)
                     if is_visible: ax.draw_artist(ax.xaxis)
+                else:
+                    ax.set_xlim((-self.t_lims, self.t_lims) if not is_visible else orig_xlims)
 
         set_visibility(False)  # Make axes and lines invisible
+        plt.tight_layout(0, 0.6)
         self.fig.canvas.draw()  # Rerender full figure
         self.bg_cache = self.fig.canvas.copy_from_bbox(self.fig.bbox)  # Copy the whole canvas
         set_visibility(True)  # Make everything visible again
         self.fig.canvas.blit()  # Rerender only necessary parts
-
 
     def update(self):
         # Update video frame (if needed)
@@ -217,7 +217,7 @@ class GroundTruthLabelerWindow(tk.Tk):
 
         # Setup ui
         self.title("Ground truth labeler")
-        win_size = np.array((video_canvas_size[1] + weight_canvas_size[1] + 2*self.WIN_PAD + 2*self.GRID_PAD, video_canvas_size[0]+300))
+        win_size = np.array((video_canvas_size[1] + weight_canvas_size[1] + 2*self.WIN_PAD + 2*self.GRID_PAD, video_canvas_size[0]+200))
         win_offs = (np.array((self.winfo_screenwidth(), self.winfo_screenheight())) - win_size)/2
         self.geometry("{s[0]}x{s[1]}+{o[0]}+{o[1]}".format(s=win_size.astype(int), o=win_offs.astype(int)))
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -234,53 +234,53 @@ class GroundTruthLabelerWindow(tk.Tk):
 
         # Widgets
         self.video_and_weight_container = tk.Frame(self)
-        self.video_and_weight_container.grid(column=0, columnspan=6, row=0, sticky='nesw', ipady=self.GRID_PAD/2, in_=self.ui_container)
+        self.video_and_weight_container.grid(row=0, column=0, columnspan=6, sticky='nesw', ipady=self.GRID_PAD/2, in_=self.ui_container)
         self.video_canvas = ResizableImageCanvas(master=self, width=video_canvas_size[1], height=video_canvas_size[0], highlightthickness=0)
-        self.video_canvas.grid(column=0, row=0, sticky='nesw', in_=self.video_and_weight_container)
+        self.video_canvas.grid(row=0, column=0, sticky='nesw', in_=self.video_and_weight_container)
         self.weight_canvas = FigureCanvasTkAgg(self.video_and_weight.fig, master=self)
-        self.weight_canvas.draw()
-        self.weight_canvas.get_tk_widget().grid(column=1, row=0, sticky='ns', padx=(self.WIN_PAD, 0), in_=self.video_and_weight_container)
+        self.weight_canvas.get_tk_widget().grid(row=0, column=1, sticky='ns', padx=(self.WIN_PAD, 0), in_=self.video_and_weight_container)
         self.weight_canvas.get_tk_widget().bind("<Configure>", self.video_and_weight.update_bg_cache)
         self.video_and_weight.video_canvas = self.video_canvas
         self.video_and_weight.weight_canvas = self.weight_canvas
-        self.lst_events = MultiColumnListbox(column_headers, master=self)
+        self.lst_events = MultiColumnListbox(column_headers, master=self, height=5)
         for i,w in enumerate(column_widths):
             if w > 0:
                 self.lst_events.tree.column(i, width=w, stretch=False)
-        self.lst_events.container.grid(column=0, columnspan=6, row=1, pady=self.GRID_PAD, sticky='nesw', in_=self.ui_container)
+        self.lst_events.container.grid(row=1, column=0, columnspan=6, pady=self.GRID_PAD, sticky='nesw', in_=self.ui_container)
         num_quantity = tk.Spinbox(self, from_=1, to_=5, width=1, borderwidth=0, textvariable=self.quantity)
-        num_quantity.grid(column=0, row=2, rowspan=2, in_=self.ui_container)
+        num_quantity.grid(row=2, rowspan=2, column=0, in_=self.ui_container)
         drp_product = tk.OptionMenu(self, self.selected_product, *options)
-        drp_product.grid(column=1, row=2, rowspan=2, sticky='ew', ipadx=10, in_=self.ui_container)
+        drp_product.grid(row=2, rowspan=2, column=1, sticky='ew', ipadx=10, in_=self.ui_container)
         opt_pickup = tk.Radiobutton(self, text="Pick up", variable=self.is_pickup, value=True)
-        opt_pickup.grid(column=2, row=2, sticky='ew', ipadx=10, in_=self.ui_container)
+        opt_pickup.grid(row=2, column=2, sticky='ew', ipadx=10, in_=self.ui_container)
         opt_pickup = tk.Radiobutton(self, text="Put back", variable=self.is_pickup, value=False)
-        opt_pickup.grid(column=2, row=3, sticky='ew', ipadx=0, in_=self.ui_container)
-        tk.Label(self, text="Start:").grid(column=3, row=2, sticky='nsew', in_=self.ui_container)
-        tk.Label(self, text="End:").grid(column=3, row=3, sticky='nsew', in_=self.ui_container)
+        opt_pickup.grid(row=3, column=2, sticky='ew', ipadx=0, in_=self.ui_container)
+        tk.Label(self, text="Start:").grid(row=2, column=3, sticky='nsew', in_=self.ui_container)
+        tk.Label(self, text="End:").grid(row=3, column=3, sticky='nsew', in_=self.ui_container)
         self.txt_t_start = tk.Text(self, state=tk.DISABLED, height=1, width=26)
-        self.txt_t_start.grid(column=4, row=2, sticky='nsew', in_=self.ui_container)
+        self.txt_t_start.grid(row=2, column=4, sticky='nsew', in_=self.ui_container)
         self.txt_t_end = tk.Text(self, state=tk.DISABLED, height=1, width=26)
-        self.txt_t_end.grid(column=4, row=3, sticky='nsew', in_=self.ui_container)
+        self.txt_t_end.grid(row=3, column=4, sticky='nsew', in_=self.ui_container)
         self._update_time()  # Initialize their text
         btn_add_event = tk.Button(self, text="Add event", command=self.add_event)
-        btn_add_event.grid(column=5, row=2, rowspan=2, in_=self.ui_container)
+        btn_add_event.grid(row=2, rowspan=2, column=5, in_=self.ui_container)
 
         # Event handling
         self.bind('<KeyPress>', self.video_and_weight.keys_pressed.put)
         self.lst_events.tree.bind('<KeyPress>', self.remove_event)
 
         # Make grids expandable on window resize
-        self.ui_container.grid_rowconfigure(0, weight=1)
-        self.ui_container.grid_rowconfigure(1, weight=1)
+        self.ui_container.grid_rowconfigure(0, weight=10, minsize=200)
+        self.ui_container.grid_rowconfigure(1, weight=1, minsize=50)
         self.ui_container.grid_columnconfigure(1, weight=1)
         self.video_and_weight_container.grid_columnconfigure(0, weight=1)
         self.video_and_weight_container.grid_rowconfigure(0, weight=1)
 
+    def run(self):
         # Load the first image
+        self.update()
         self.update_canvas()
 
-    def run(self):
         # Run main loop
         self.mainloop()
 
