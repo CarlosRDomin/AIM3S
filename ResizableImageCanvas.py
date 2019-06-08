@@ -19,7 +19,7 @@ class ResizableImageCanvas(tk.Canvas):
         self.tk_img = None
         self.tk_img_size = (0, 0)
         self.canvas_img = None
-        self.canvas_size = np.array((self.winfo_width(), self.winfo_height()), dtype=float)
+        self.canvas_size = np.array((self.winfo_reqwidth(), self.winfo_reqheight()), dtype=float)
 
     def _fit(self, dims):  # Fit an image inside the canvas and return its dimensions
         dims = np.array(dims, dtype=float)
@@ -31,10 +31,14 @@ class ResizableImageCanvas(tk.Canvas):
         else:
             return self.canvas_size
 
+    def canvas_to_img_coords(self, canvas_coords):
+        origin = (self.canvas_size - self.tk_img_size)/2.
+        return (canvas_coords - origin)*self.img_dims/self.tk_img_size
+
     def update_image(self, cv2_img):
         # Resize cv2_img and create a PIL.Image from it
-        img_dims = np.array(cv2_img.shape[1::-1])
-        cv2_img_resized = cv2.resize(cv2_img, tuple(self._fit(img_dims).astype(int)))
+        self.img_dims = np.array(cv2_img.shape[1::-1])
+        cv2_img_resized = cv2.resize(cv2_img, tuple(self._fit(self.img_dims).astype(int)))
         cv2.cvtColor(cv2_img_resized, cv2.COLOR_BGR2RGB, cv2_img_resized)
         self.img = Image.fromarray(cv2_img_resized)
 
