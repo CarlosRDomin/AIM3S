@@ -139,7 +139,7 @@ if __name__ == "__main__":
     parser.add_argument('-p', "--pass", dest="passwd", default="", help="Camera's password")
     parser.add_argument('-c', "--channel", dest="ch", default="1", help="Camera's channel")
     parser.add_argument('-s', "--stream", default="0", help="Camera's stream")
-    parser.add_argument('-f', "--folder", default="Dataset/Characterization", help="Recording output folder")
+    parser.add_argument('-f', "--folder", default="Dataset/Evaluation", help="Recording output folder")
     parser.add_argument('-k', "--codec", default="avc1", help="Output video codec")
     parser.add_argument('-r', "--fps", default=30, type=int, help="Output video frame rate")
     parser.add_argument('-m', "--multiple-recordings", default=False, action="store_true", help="Append this flag to allow for multiple recordings without needing to re-run the script")

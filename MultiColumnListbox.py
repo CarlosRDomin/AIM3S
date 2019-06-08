@@ -13,12 +13,12 @@ class MultiColumnListbox(object):
 
     def __init__(self, headers, data=None, sortable=True, scrollbars_on_overflow=False, autowidth_on_add=False, master=None, **kw):
         self.container = tk.Frame(master)
-        self.container.pack(fill='both', expand=True)
+        self.container.pack(fill="both", expand=True)
 
         self.tree = ttk.Treeview(master, columns=headers, show="headings", **kw)
 
         if not scrollbars_on_overflow:
-            self.tree.pack(fill='x', in_=self.container)
+            self.tree.pack(fill="both", expand=True, in_=self.container)
         else:
             vsb = ttk.Scrollbar(orient="vertical", command=self.tree.yview)
             hsb = ttk.Scrollbar(orient="horizontal", command=self.tree.xview)
