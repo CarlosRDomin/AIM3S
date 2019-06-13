@@ -132,7 +132,7 @@ class ProductPredictionVisualizer(tk.Tk):
     WIN_PAD = 10
     FIG_W = 550
 
-    def __init__(self, video_filename, visual_predictions, is_multicam=True, with_hist_navbar=False):
+    def __init__(self, video_filename, visual_predictions, frame_nums=None, is_multicam=True, with_hist_navbar=False):
         super(ProductPredictionVisualizer, self).__init__()
 
         self.video_filename = video_filename
@@ -150,6 +150,7 @@ class ProductPredictionVisualizer(tk.Tk):
         self.img = np.zeros((H, W, 3), dtype=np.uint8)
         self.N_frames = int(self.v.get(cv2.CAP_PROP_FRAME_COUNT))
         self.n_frame = int(self.v.get(cv2.CAP_PROP_POS_FRAMES))
+        self.frame_nums = frame_nums if frame_nums is not None else np.tile(np.arange(1, self.N_frames+1), (4,1))
         self.do_skip_frames = False
         self.is_paused = False
 
@@ -211,7 +212,7 @@ class ProductPredictionVisualizer(tk.Tk):
 
                 # Process products found in this frame
                 for cam, pred_frames in self.visual_predictions.items():
-                    products_found = pred_frames.get(HDF5_FRAME_NAME_FORMAT.format(self.n_frame), ())
+                    products_found = pred_frames.get(HDF5_FRAME_NAME_FORMAT.format(self.frame_nums[cam-1, self.n_frame-1]), ())
                     self.items_in_frame_manager.add(products_found)
 
             # Visualize results
@@ -307,16 +308,20 @@ class ProductPredictionExperimentsVisualizer(ExperimentTraverser):
             cams = self.cams
             cam_video_filenames = [os.path.join(cams_folder, f, "cam{}_{}.mp4".format(c, f)) for c in cams]
 
+        # Load resampled timing (-> makes fps ~constant)
+        with h5py.File(os.path.join(experiment_folder, "multicam_{}.h5".format(f)), 'r') as f_hdf5:
+            frame_nums = f_hdf5['frame_nums'][:]
+
         # Load predictions for each cam
         visual_predictions = {}
         for cam in cams:
             with h5py.File(os.path.join(experiment_folder, "product_prediction_cam{}_{}.h5".format(cam, f)), 'r') as f_hdf5:
-                visual_predictions[cam] = dict([(frame_num, prods[:]) for frame_num, prods in f_hdf5.items()])
+                visual_predictions[int(cam)] = dict([(frame_num, prods[:]) for frame_num, prods in f_hdf5.items()])
             print("Loaded visual product predictions from cam {}...".format(cam))
 
         # Visualize video
         for video_filename in cam_video_filenames:
-            ProductPredictionVisualizer(video_filename, visual_predictions, self.is_multicam).run()
+            ProductPredictionVisualizer(video_filename, visual_predictions, frame_nums, self.is_multicam).run()
 
 
 if __name__ == "__main__":
