@@ -17,7 +17,8 @@ function data = readHDF5(filename, root)
 	% Fill in data from datasets
 	for i = 1:length(info.Datasets)
 		fieldName = info.Datasets(i).Name;
-		data.(fieldName) = h5read(filename, [root '/' fieldName]);
+        fieldNameParts = strsplit(fieldName, '.');  % struct fields can't contain '.'s -> Keep only up to the first dot
+		data.(fieldNameParts{1}) = h5read(filename, [root '/' fieldName]);
 	end
 	
 	% Fill in data from groups, recursively
