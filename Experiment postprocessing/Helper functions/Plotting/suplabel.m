@@ -8,7 +8,7 @@ function [ax, h] = suplabel(text, whichLabel, supAxes, axMargin, varargin)
 %  suplabel(text) with one input argument assumes whichLabel='x'
 %
 % whichLabel is any of 'x', 'y', 'yy', or 't', specifying whether the
-% text is to be the xlable, ylabel, right side y-label,
+% text is to be the xlabel, ylabel, right side y-label,
 % or title respectively.
 %
 % supAxes is an optional argument specifying the Position of the
