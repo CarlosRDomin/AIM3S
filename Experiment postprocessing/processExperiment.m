@@ -4,14 +4,14 @@ function out = processExperiment(tStr, experimentType, DATA_FOLDER, binWidth, sy
     if nargin<4 || isempty(binWidth), binWidth = [1 2 3 4 6]; end
     if nargin<5 || isempty(systemParams), systemParams = struct('movAvgWindowInSamples',60, 'epsVar',500, 'epsMeanShelf',10, 'epsMeanPlate',5, 'N_high',30, 'N_low',30, 'Nvision',seconds(3), 'radHandSq',([100 100 100 200]/2).^2); end
     if nargin<6 || isempty(productArrangement) || isempty(weightModelParams), [productArrangement, weightModelParams] = loadProductModels(DATA_FOLDER); end
-    if nargin<8 || isempty(doVision), doVision = false; end
+    if nargin<8 || isempty(doVision), doVision = true; end
     
-    [weights, ~, ~, cams, events_detected, gt] = loadExperiment(tStr, experimentType, DATA_FOLDER, binWidth, systemParams);
+    [weights, weightsPerBin, ~, cams, events_detected, gt] = loadExperiment(tStr, experimentType, DATA_FOLDER, binWidth, systemParams, doVision);
     is5shelf = (size(weights.w, 2) == 5);
     events_gt = gt2events(gt, weights, binWidth, systemParams);
     out = struct('tStr',tStr, 'gt',gt, 'events_gt',events_gt, 'events_detected',events_detected, 'from_detected_events',[], 'from_gt_events',[]);
     
-    for eventType = 1:2
+    for eventType = 2:-1:1
         if eventType == 1
             events = events_detected;
             outFieldName = 'from_detected_events';
@@ -32,7 +32,7 @@ function out = processExperiment(tStr, experimentType, DATA_FOLDER, binWidth, sy
             end
 
             % Arrangement probability
-            [probPlate, probHalfShelf, probShelf] = computeArrangementProbability(events(iEv).shelf, events(iEv).bins, productArrangement(2-is5shelf), binWidth);
+            [probPlate, probHalfShelf, probShelf] = computeArrangementProbability(weightsPerBin, events(iEv), productArrangement(2-is5shelf));
 
             % Weight probability
             probWeight = computeWeightProbability(events(iEv).deltaW, weightModelParams(2-is5shelf));
@@ -48,22 +48,26 @@ function out = processExperiment(tStr, experimentType, DATA_FOLDER, binWidth, sy
                 end
                 camFrames = find((cams.t >= tStart) & (cams.t <= tEnd));
 
-                camPredictions = cell(1, size(cams.hands,2));  % 1xnumCams
+                %camPredictions = cell(1, size(cams.hands,2));  % 1xnumCams
+                camPredictions = repmat({ones(length(probWeight),0)}, 1,size(cams.hands,2));
                 for iFrame = 1:length(camFrames)
                     frame = camFrames(iFrame);
                     for iCam = 1:length(camPredictions)
                         hands = cams.hands{frame, iCam};
                         products = cams.products{frame, iCam};
                         if isempty(hands) || isempty(products), continue; end
+                        % Sometimes there's multiple bboxes with exactly the same probability -> Keep only unique columns
+                        [~,iProds]=unique(products(1:end-4,:)', 'rows');
+                        products = products(:,iProds);
 
-                        productCenters = (products(1:2,:) + products(3:4,:))/2;  % Equivalent to: products(1:2,:) + (products(3:4,:)-products(1:2,:))./2;
+                        productCenters = (products(end-4 + (1:2),:) + products(end-4 + (3:4),:))/2;  % Equivalent to: products(1:2,:) + (products(3:4,:)-products(1:2,:))./2;
                         squaredDists = sum((productCenters - reshape(hands(1:2,:), 2,1,[])).^2);
                         productsToKeep = any(squaredDists <= systemParams.radHandSq(iCam), 3);
                         if sum(productsToKeep) > 0 && false
                             plotBboxesAndHands(products, hands, [], systemParams.radHandSq(iCam));
                             title(sprintf('Frame: %d, cam: %d', frame, iCam));
                         end
-                        camPredictions{iCam} = [camPredictions{iCam}, 1-products(5:end,productsToKeep)];
+                        camPredictions{iCam} = [camPredictions{iCam}, 1-products(1:end-4,productsToKeep)];
                     end
                 end
                 camNotSeenProb = zeros(size(camPredictions{iCam},1), length(camPredictions));  % numProducts x numCams
@@ -73,10 +77,10 @@ function out = processExperiment(tStr, experimentType, DATA_FOLDER, binWidth, sy
             else
                 camNotSeenProb = zeros(size(probWeight,1), 4);
             end
-            probVision = 1 - prod(camNotSeenProb, 2);
+            %probVision = 1 - prod(camNotSeenProb, 2);
             
             % Save results
-            out.(outFieldName)(end+1,1) = struct('iEv',iEv, 'probWeight',probWeight, 'probPlate',{probPlate}, 'probHalfShelf',{probHalfShelf}, 'probShelf',probShelf, 'probVision',probVision);
+            out.(outFieldName)(end+1,1) = struct('iEv',iEv, 'probWeight',probWeight, 'probPlate',{probPlate}, 'probHalfShelf',{probHalfShelf}, 'probShelf',probShelf, 'probVision',1-camNotSeenProb);
         end
     end
     

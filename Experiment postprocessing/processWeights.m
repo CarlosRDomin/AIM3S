@@ -2,9 +2,9 @@ close all;
 loadCommonConstants;  % Load default systemParams, DATA_FOLDER, etc
 
 %% Load experiment
-tStr = '2019-04-03_20-10-22'; '2019-04-03_19-50-26';
+tStr = '2019-04-05_17-21-02'; '2019-04-03_19-50-26';
 binWidth = 1;
-[weights, weightsPerBin, weightsPerShelf, cams, events, gt] = loadExperiment(tStr, experimentType, DATA_FOLDER, binWidth, systemParams);
+[weights, weightsPerBin, weightsPerShelf, cams, events, gt] = loadExperiment(tStr, experimentType, DATA_FOLDER, binWidth, systemParams, false);
 events_gt = gt2events(gt, weights, binWidth, systemParams);
 
 %% Sum of plates in a shelf per plot
