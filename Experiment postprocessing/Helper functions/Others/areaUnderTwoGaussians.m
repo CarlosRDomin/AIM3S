@@ -1,5 +1,5 @@
-function A = areaUnderTwoGaussians(mu1, sigma1, mu2, sigma2, boolPlot)
-    if nargin<5 || isempty(boolPlot), boolPlot = []; end  % boolPlot can specify [xMin xMax] if you want to plot both gaussians
+function A = areaUnderTwoGaussians(mu1, sigma1, mu2, sigma2, plotLims)
+    if nargin<5 || isempty(plotLims), plotLims = []; end  % plotLims can specify [xMin xMax] if you want to plot both gaussians
     
     % Find the intersection of both pdf's -> We used:
     % syms x mu1 sigma1 mu2 sigma2
@@ -27,17 +27,16 @@ function A = areaUnderTwoGaussians(mu1, sigma1, mu2, sigma2, boolPlot)
     end
     if A > 1, A=0; end  % Due to loss in precission, sometimes normpdf(xEv, mu1, sigma1) = normpdf(xEv, mu2, sigma2) = 0. In that case, A would be (wrongly) computed as 2, but should be 0
     
-    if ~isempty(boolPlot)
-        disp(calc_overlap_twonormal(mu1, sigma1, mu2, sigma2, boolPlot(1), boolPlot(2), 0.05));
+    if ~isempty(plotLims)
+        disp(calc_overlap_twonormal(mu1, sigma1, mu2, sigma2, plotLims(1):0.05:plotLims(2)));
     end
 end
 
-function A = calc_overlap_twonormal(mu1,s1,mu2,s2,xstart,xend,xinterval)
-    x_range = xstart:xinterval:xend;
-    y = [normpdf(x_range,mu1,s1); normpdf(x_range,mu2,s2)]';
+function A = calc_overlap_twonormal(mu1, s1, mu2, s2, xRange)
+    y = [normpdf(xRange,mu1,s1); normpdf(xRange,mu2,s2)]';
     yMin = min(y, [], 2);
-    plot(x_range, y); hold on;
-    area(x_range, yMin);
-    overlap = cumtrapz(x_range, yMin);
+    plot(xRange, y); hold on;
+    area(xRange, yMin);
+    overlap = cumtrapz(xRange, yMin);
     A = overlap(end);
 end

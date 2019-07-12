@@ -16,7 +16,7 @@ function cams = loadCamsData(tStr, experimentType, DATA_FOLDER, loadBgndMask)
         fprintf('\tLoading cam %d data (pose, products, background subtraction masks)\n', iCam);
         CAM_SUFFIX = ['cam' num2str(iCam) '_' tStr];
         camInfo = readHDF5([EXP_PREFIX CAM_SUFFIX '.h5']);
-        prodInfo = readHDF5([EXP_PREFIX 'product_prediction_' CAM_SUFFIX '.h5']);
+        prodInfo = readHDF5([EXP_PREFIX CAM_SUFFIX '_mask_objdet' '.h5']);
         framesWithProds = fieldnames(prodInfo);
         for iFrame = 1:length(multicam.frame_nums)
             frameNum = multicam.frame_nums(iFrame, iCam)+1;  % Add 1 since indexing is 0-based

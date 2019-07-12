@@ -1,10 +1,11 @@
-function [productArrangement, weightModelParams] = loadProductModels(DATA_FOLDER, numPlates)
+function [productArrangement, weightModelParams, productsInfo] = loadProductModels(DATA_FOLDER, numPlates)
     if nargin<1 || isempty(DATA_FOLDER), DATA_FOLDER = '../Dataset'; end
     if nargin<2 || isempty(numPlates), numPlates = 12; end
     
     productJson = jsondecode(fileread(sprintf('%s/product_info.json', DATA_FOLDER)));
     productArrangement = struct('plate',[], 'halfShelf',[], 'shelf',[], 'whatsInEachPlate',[], 'numShelves',{5;8});
     weightModelParams = struct('mean',[], 'std',[], 'numShelves',{5;8});
+    productsInfo = cell(length(productArrangement), 1);
 
     for i = 1:length(productArrangement)
         if productArrangement(i).numShelves == 5
@@ -12,6 +13,17 @@ function [productArrangement, weightModelParams] = loadProductModels(DATA_FOLDER
         else
             productInfo = productJson.products(34:end);
         end
+        
+        % Save productInfo as a struct array
+        %  (for that, all entries in productInfo need to have the same fields; 
+        %  some items don't have a 'training_id' -> initialize it to [] first)
+        fName = 'training_id';
+        for iP = 1:length(productInfo)
+            if ~isfield(productInfo{iP}, fName)
+                productInfo{iP}.(fName) = [];
+            end
+        end
+        productsInfo{i} = [productInfo{:}]';  % Convert cell array of structs to struct array
 
         % Compute weight model: mu and sigma of Gaussian for each product
         mu = zeros(length(productInfo), 1);

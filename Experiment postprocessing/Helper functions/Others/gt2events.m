@@ -23,7 +23,12 @@ function [events, weightsPerBin, weightsPerShelf] = gt2events(gt, weights, binWi
 		% Determine contributing bins
         bins = cell(length(binWidth),1);
         for iBinW = 1:length(binWidth)
-            bins{iBinW} = find(abs(diff(weightsPerBin(iBinW).wMean([nB nE],iShelf,:))) > systemParams.epsMeanPlate)';
+            if ~isempty(deltaW)
+                %bins{iBinW} = find(sign(deltaW)*diff(weightsPerBin(iBinW).wMean([nB nE],iShelf,:)) > systemParams.epsMeanPlate)';
+                bins{iBinW} = find(abs(diff(weightsPerBin(iBinW).wMean([nB nE],iShelf,:))) > systemParams.epsMeanPlate)';
+            else  % All bins
+                bins{iBinW} = 1:size(weights.w,3)/binWidth(iBinW);
+            end
         end
 
         % Fill in the new event entry

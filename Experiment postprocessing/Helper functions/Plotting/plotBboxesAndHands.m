@@ -4,9 +4,9 @@ function f = plotBboxesAndHands(products, hands, imgDims, Rsquared)
     
     f = figure; axis([0 imgDims(2) 0 imgDims(1)], 'image', 'ij'); hold on;
     for iProd = 1:size(products,2)
-        rectangle('Position', [products(1:2,iProd); products(3:4,iProd)-products(1:2,iProd)]);
+        rectangle('Position', [products(end-4 + (1:2),iProd); products(end-4 + (3:4),iProd)-products(end-4 + (1:2),iProd)]);
     end
-    productCenters = (products(1:2,:) + products(3:4,:))/2;
+    productCenters = (products(end-4 + (1:2),:) + products(end-4 + (3:4),:))/2;
     squaredDists = sum((productCenters - reshape(hands(1:2,:), 2,1,[])).^2);
     productsWithinR = any(squaredDists <= Rsquared, 3);
     
@@ -14,4 +14,5 @@ function f = plotBboxesAndHands(products, hands, imgDims, Rsquared)
     scatter(productCenters(1,productsWithinR), productCenters(2,productsWithinR), 30, 'filled', 'MarkerFaceColor','g');
     scatter(hands(1,:), hands(2,:), 30, 'filled', 'MarkerFaceColor','b');
     viscircles(hands(1:2,:)', repmat(sqrt(Rsquared), size(hands,2),1), 'Color','b', 'LineStyle','--');
+    axis([0 imgDims(2) 0 imgDims(1)]);
 end
