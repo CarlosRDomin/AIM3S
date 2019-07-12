@@ -1,10 +1,9 @@
 import cv2
 import numpy as np
-from read_dataset import read_weights_data
 from aux_tools import str2bool, _min, _max, ensure_folder_exists, format_axis_as_timedelta, JointEnum, save_datetime_to_h5, ExperimentTraverser, EXPERIMENT_DATETIME_STR_FORMAT
-from matplotlib import pyplot as plt
 from datetime import datetime
 from multiprocessing import Pool, cpu_count
+import traceback
 import glob
 import argparse
 import h5py
@@ -45,6 +44,9 @@ BACKGROUND_MASKS_FOLDER_NAME = "background_masks"
 
 
 def preprocess_weight(parent_folder, do_tare=False, visualize=False):
+    from read_dataset import read_weights_data
+    from matplotlib import pyplot as plt
+
     print("Processing weights at {}".format(parent_folder))
     t_start = os.path.basename(parent_folder)
 
@@ -75,6 +77,67 @@ def preprocess_weight(parent_folder, do_tare=False, visualize=False):
                 fig.show()
 
     print("Done processing weights as '{}'! t_min={}; t_max={}; N={}".format(h5_filename, weight_t[0], weight_t[-1], weight_data.shape))
+
+
+def preprocess_vision_object_detection(video_filename, gpu_id, config_file="configs/aim3s.yaml", confidence_thresh=0.1, categories_file="../aim3s_dataset/aim3s.names", generate_video=True):
+    from maskrcnn_benchmark.config import cfg
+    from predictor_skus import SKUsDemo
+
+    video_prefix = os.path.splitext(video_filename)[0]  # Remove extension
+    file_prefix = video_prefix + "_objdet"
+
+    # Load MaskRCNN config
+    cfg.merge_from_file(config_file)
+    cfg.MODEL.DEVICE = gpu_id  # Run the model on the specified gpu
+    #cfg.freeze()
+
+    # Load category names
+    with open(categories_file) as f:
+        categories = f.readlines()
+
+    # Prepare object that handles inference plus adds predictions on top of image
+    model = SKUsDemo(
+        cfg,
+        categories=categories,
+        confidence_threshold=confidence_thresh,
+    )
+
+    # Initialize video
+    v = cv2.VideoCapture(video_filename)
+    N = v.get(cv2.CAP_PROP_FRAME_COUNT)
+    n = 0
+    if generate_video:
+        v_out = cv2.VideoWriter("{}.mp4".format(file_prefix), cv2.VideoWriter_fourcc(*'mp4v'), 25.0,
+            (int(v.get(cv2.CAP_PROP_FRAME_WIDTH)), int(v.get(cv2.CAP_PROP_FRAME_HEIGHT))))
+
+    # Process video
+    with h5py.File("{}.h5".format(file_prefix), 'w') as f:
+        while n < N:  # Read every frame
+            images = []
+            while n < N and len(images) < 15:  # Read a block of frames
+                ok, img = v.read()
+                assert ok, "Couldn't read frame from video {}".format(video_filename)
+                images.append(img)
+                n += 1
+
+            # Process frame block
+            preds = model.compute_prediction_list(images)
+
+            for i, predictions in enumerate(preds):
+                predictions = model.select_top_predictions(predictions)
+                f.create_dataset(HDF5_FRAME_NAME_FORMAT.format(n-len(preds)+i+1), data=predictions.get_field("scores_all").numpy())
+
+                if generate_video:
+                    img = model.overlay_boxes(images[i], predictions)
+                    img = model.overlay_class_names(img, predictions)
+                    v_out.write(img)
+
+                # Display progress
+                #if n % 25 == 0:
+            print("Processed frame {}/{} for video {} ({:.2f}%)".format(n, N, video_filename, 100.*n/N))
+
+    if generate_video:
+        v_out.release()
 
 
 def preprocess_vision(video_filename, pose_model_folder, wrist_thresh=0.2, crop_half_w=100, crop_half_h=100):
@@ -160,18 +223,22 @@ def _crop_image(img, center, half_w, half_h):
 
 
 class ExperimentPreProcessor(ExperimentTraverser):
-    def __init__(self, main_folder, start_datetime=datetime.min, end_datetime=datetime.max, do_weight=True, do_pose=True, pose_model_folder="openpose-models/", num_processes_weight=cpu_count(), num_processes_vision=3):
+    def __init__(self, main_folder, start_datetime=datetime.min, end_datetime=datetime.max, do_weight=True, do_pose=True, do_objdet=True, pose_model_folder="openpose-models/", num_processes_weight=cpu_count(), num_processes_vision=3, num_processes_objdet=4, num_gpus=3):
         super(ExperimentPreProcessor, self).__init__(main_folder, start_datetime, end_datetime)
         self.do_weight = do_weight
+        self.do_objdet = do_objdet
         self.do_pose = do_pose
         self.pose_model_folder = pose_model_folder
 
         self.pool_weight = Pool(processes=num_processes_weight) if do_weight else None
         self.pool_vision = Pool(processes=num_processes_vision) if do_pose else None
+        self.pool_objdet = [Pool(processes=num_processes_objdet) if do_objdet else None for i in range(num_gpus)]
         self.weight_tasks_state = []
         self.vision_tasks_state = []
         self.num_weight_tasks_done = 0
         self.num_vision_tasks_done = 0
+        self.next_gpu = 0
+        self.num_gpus = num_gpus
 
     def _task_done_cb(self, is_weight):
         if is_weight:
@@ -196,19 +263,29 @@ class ExperimentPreProcessor(ExperimentTraverser):
             self.weight_tasks_state.append(task_state)
 
         # Tell the pose preprocessor to run pose estimation on every camera video
-        if self.do_pose:
-            for video in glob.glob(os.path.join(parent_folder, "cam*_{}.mp4".format(f))):
+        for video in glob.glob(os.path.join(parent_folder, "cam*_{}.mp4".format(f))):
+            if self.do_pose:
                 kwds = {"crop_half_w": 200, "crop_half_h": 200} if os.path.basename(video).startswith("cam4") else {}  # Top-down camera is closer -> Crop bigger window
                 task_state = self.pool_vision.apply_async(preprocess_vision, (video, self.pose_model_folder), kwds, callback=lambda _: self._task_done_cb(is_weight=False))
                 self.vision_tasks_state.append(task_state)
+
+            if self.do_objdet:
+                task_state = self.pool_objdet[self.next_gpu].apply_async(preprocess_vision_object_detection, (video, self.next_gpu), callback=lambda _: self._task_done_cb(is_weight=False))
+                self.next_gpu = (self.next_gpu+1) % self.num_gpus
+                self.vision_tasks_state.append(task_state)
+
 
     def on_done(self):
         print("Preprocessing tasks enqueued, waiting for them to complete!")
         for tasks_state in (self.weight_tasks_state, self.vision_tasks_state):
             for i,task_state in enumerate(tasks_state):
-                task_state.wait()
-                if not task_state.successful():
-                    print("Uh oh... {} task {}: {}".format("Weight" if tasks_state==self.weight_tasks_state else "Vision", i+1, task_state._value))
+                try:
+                    task_state.get()
+                except Exception as e:
+                    traceback.print_exc()
+                # task_state.wait()
+                # if not task_state.successful():
+                #     print("Uh oh... {} task {}: {}".format("Weight" if tasks_state==self.weight_tasks_state else "Vision", i+1, task_state._value))
 
         print("All done!")
 
@@ -220,13 +297,16 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--end-datetime", default="", help="Only preprocess experiments collected before this datetime (format: {}; empty for no limit)".format(EXPERIMENT_DATETIME_STR_FORMAT))
     parser.add_argument('-w', "--do-weight", default=True, type=str2bool, help="Whether or not to pre-process weight")
     parser.add_argument('-p', "--do-pose", default=True, type=str2bool, help="Whether or not to pre-process human pose")
+    parser.add_argument('-o', "--do-objdet", default=True, type=str2bool, help="Whether or not to pre-process videos with object detection")
     parser.add_argument('-pm', "--pose-model-folder", default="openpose-models/", help="Human pose model folder location (can be a symlink)")
     parser.add_argument('-nw', "--num-processes-weight", default=cpu_count(), type=int, help="Number of processes to spawn for weight preprocessing")
     parser.add_argument('-nv', "--num-processes-vision", default=3, type=int, help="Number of processes to spawn for vision preprocessing")
+    parser.add_argument('-no', "--num-processes-objdet", default=4, type=int, help="Number of processes to spawn for object detection preprocessing (will be multiplied by the number of GPUs)")
+    parser.add_argument('-ng', "--num-gpus", default=1, type=int, help="Number of GPUs available")
     args = parser.parse_args()
 
     t_start = datetime.strptime(args.start_datetime, EXPERIMENT_DATETIME_STR_FORMAT) if len(args.start_datetime) > 0 else datetime.min
     t_end = datetime.strptime(args.end_datetime, EXPERIMENT_DATETIME_STR_FORMAT) if len(args.end_datetime) > 0 else datetime.max
 
-    ExperimentPreProcessor(args.folder, t_start, t_end, args.do_weight, args.do_pose, args.pose_model_folder, args.num_processes_weight, args.num_processes_vision).run()
+    ExperimentPreProcessor(args.folder, t_start, t_end, args.do_weight, args.do_pose, args.do_objdet, args.pose_model_folder, args.num_processes_weight, args.num_processes_vision, args.num_processes_objdet, args.num_gpus).run()
 
