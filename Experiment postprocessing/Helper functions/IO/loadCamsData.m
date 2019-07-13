@@ -9,7 +9,7 @@ function cams = loadCamsData(tStr, experimentType, DATA_FOLDER, loadBgndMask)
 	multicam = readHDF5([EXP_PREFIX 'multicam_' tStr '.h5']);
     t = (parseStrDatetime(multicam.t_start):seconds(1/double(multicam.fps)):parseStrDatetime(multicam.t_end))';
     aux = {cell(size(multicam.frame_nums))};  % Every field in cams will have a cell entry per frame (row) and cam (col)
-    cams = struct('t',t, 'hands',aux, 'products',aux, 'bgndMask',aux);
+    cams = struct('t',t, 'frameNums',multicam.frame_nums, 'hands',aux, 'products',aux, 'bgndMask',aux);
     
     % Fill in info for each cam
     for iCam = 1:size(multicam.frame_nums,2)
