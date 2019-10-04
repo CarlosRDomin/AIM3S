@@ -31,6 +31,7 @@ function out = autoTag(tStr, experimentType, DATA_FOLDER, binWidth, systemParams
         out.(outFieldName) = struct('iEv',{}, 'probWeight',{}, 'probPlate',{}, 'probHalfShelf',{}, 'probShelf',{}, 'probVision',{});
 
         for iEv = 1:length(events)
+            fprintf('Processing event %d (out of %d)...\n', iEv, length(events));
             if events(iEv).tE > gt.t_exit_store && false
                 fprintf('\tEvent %d %s ignored (tE=%s after subject left the store)\n', iEv, outFieldName, events(iEv).tE);
                 continue
@@ -91,6 +92,7 @@ function out = autoTag(tStr, experimentType, DATA_FOLDER, binWidth, systemParams
                         imwrite(imgCropped, [outPrefix '.jpg']);
                         imwrite(imgMaskCropped, [outPrefix '_mask.jpg']);
                     end
+                    writeHDF5dataset([OUTPUT_FOLDER '/autoTag_' tStr '.h5'], sprintf('/cam%d/frame%05d', iCam, frameNum+1), products(:, productsToKeep));
                     camPredictions{iCam} = [camPredictions{iCam}, 1-products(1:end-4,productsToKeep)];
                 end
             end

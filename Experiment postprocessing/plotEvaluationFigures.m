@@ -72,40 +72,45 @@ if true
     figPos = [0 0 500 300]; fSize = 16;
     
     %% Accuracy vs binWidth
-    f = figure('Position',figPos, 'DefaultAxesFontSize',fSize); subtightplot(1,1,1,[],[0 0.02],[0.12 0.02]);
-    b=bar(categorical([1 2 3 4 6 12]), [locAcc([1:5 end]); wChangeAcc([1:5 end]); weightAcc([1:5 end]); aim3sAcc([1:5 end])]'); %barvalues(f,1,false);
-    c = [0.00,0.45,0.74;0.85,0.33,0.10;0.93,0.69,0.13;0.35,0.85,0.07];
+    f = figure('Position',figPos, 'DefaultAxesFontSize',fSize); subtightplot(1,1,1,[],[0 0.02],[0.12 0.02]); halfSep = 0.086;
+    b=bar((1:6)' + (-3:2:3).*halfSep, [locAcc([1:5 end]); wChangeAcc([1:5 end]); weightAcc([1:5 end]); aim3sAcc([1:5 end])]', 'BarWidth', 5.5); %barvalues(f,1,true);
+    xticks(1:6); xticklabels([1 2 3 4 6 12]); m = 0.52; xlim([1-m, 6+m]);
+    c = [0.94,0.8,0.5; 0.98,0.63,0.15; 0.7,0.41,0.22; 0,0.44,0.71];
     for i=1:length(b), b(i).FaceColor = c(i,:); end
-    xlabel('Bin width (# plates/bin)'); ylabel('Avg. ID Accuracy (%)');
+    xlabel('Bin width (# plates/bin)'); ylabel('Avg. ID Accuracy (%)'); set(gca, 'YGrid','on');
     legend(' Location-based (P_L)', ' Weight change-based (P_W)  ', ' Weight-based (P_{weight }) ', ' AIM3S (P_{fusion }) ', 'Location','SouthOutside', 'NumColumns',2);
     saveFigure(f, 'accuracyVsBinWidth', FIG_FOLDER);
     
     %% Accuracy vs arrangementResolution
     f = figure('Position',figPos, 'DefaultAxesFontSize',fSize); subtightplot(1,1,1,[],[0 0.02],[0.12 0.02]);
-    b = bar(categorical(1:3, 1:3, {'Plate-level','Half-shelf-level','Shelf-level'}), [locAcc(1:5:end); wChangeAcc(1:5:end); weightAcc(1:5:end); aim3sAcc(1:5:end)]'); barvalues;
-    c = [0.00,0.45,0.74;0.85,0.33,0.10;0.93,0.69,0.13;0.35,0.85,0.07];
+    b = bar(categorical(1:3, 1:3, {'Plate-level','Half-shelf-level','Shelf-level'}), [locAcc(1:5:end); wChangeAcc(1:5:end); weightAcc(1:5:end); aim3sAcc(1:5:end)]', 'BarWidth',0.84); barvalues;
+    c = [0.94,0.8,0.5; 0.98,0.63,0.15; 0.7,0.41,0.22; 0,0.44,0.71];
     for i=1:length(b), b(i).FaceColor = c(i,:); end
-    xlabel('Arrangement resolution'); ylabel('Avg. ID Accuracy (%)');
+    xlabel('Item layout resolution'); ylabel('Avg. ID Accuracy (%)'); set(gca, 'YGrid','on');
     legend(' Location-based (P_L)', ' Weight change-based (P_W)  ', ' Weight-based (P_{weight }) ', ' AIM3S (P_{fusion }) ', 'Location','SouthOutside', 'NumColumns',2);
     saveFigure(f, 'accuracyVsArrResolution', FIG_FOLDER);
     
     %% Accuracy vs camSetup
-    f = figure('Position',[0 0 500 250], 'DefaultAxesFontSize',fSize-1); subtightplot(1,1,1,[],[0 0.02],[0.12 0.02]);
-    b = bar(categorical(1:length(cams), 1:length(cams), camsNames), [camAcc(:,1) camAccTop90(:,1) camAccTop90noBgndSubs(:,1) camAim3s(:,3)]); %barvalues;
-    c = [0.64,0.08,0.18;1.00,0.07,0.65;1.00,0.07,0.65;0.39,0.83,0.07];
+    f = figure('Position',[0 0 500 250], 'DefaultAxesFontSize',fSize-1); subtightplot(1,1,1,[],[0 0.02],[0.12 0.02]); halfSep = 0.17;
+    b = bar((1:length(cams))' + (-1:2:1).*halfSep, [camAcc(:,1) camAccTop90(:,1)], 'BarWidth',3.5); %t=barvalues(f,1); for i=1:length(t), set(t{i}, 'FontSize',7.7); end
+    xticks(1:length(cams)); xticklabels(camsNames); xtickangle(10); m = 0.6; xlim([1-m, length(cams)+m]);
+    c = [0.68,0.15,0.17; 0.96,0.6,0.62];
     for i=1:length(b), b(i).FaceColor = c(i,:); end
     xlabel('Cameras used'); ylabel('Avg. ID Accuracy (%)');
-    legend(' Vision-based (argmax P_V)', ' Vision-based (P_V^i > 0.9)  ', ' Vision-based (P_V^i > 0.9)  ', ' AIM3S (P_{fusion }) ', 'Location','SouthOutside', 'Orientation','Horizontal', 'FontSize',fSize-3.7);
+    yyaxis right; set(gca, 'YColor',[0,0.47,0.76], 'YGrid','on'); p=get(gca, 'Position'); p(1)=p(1)-0.03; set(gca, 'Position',p);
+    plot(1:length(cams), camAim3s(:,3), '--o', 'LineWidth',1.7, 'Color',[0,0.47,0.76], 'MarkerFaceColor',[0.3,0.75,0.93]); ylim([90 94]);
+    l=legend(' Vision-based (argmax P_V)', ' Vision-based (P_V^i > 0.9)  ', ' AIM3S (P_{fusion }) ', 'Location','SouthOutside', 'Orientation','Horizontal', 'FontSize',fSize-3.7); p=get(l, 'Position'); p(1)=0.011; set(gca, 'ActivePositionProperty','OuterPosition'); set(l, 'Position',p);
     saveFigure(f, 'accuracyVsCamsUsed', FIG_FOLDER);
     
     %% Error vs binWidth
-    f = figure('Position',[0 0 500 200], 'DefaultAxesFontSize',fSize);% subtightplot(1,1,1,[],[0.18 0.02],[0.12 0.02]);
+    f = figure('Position',[0 0 500 200], 'DefaultAxesFontSize',fSize); halfSep = 0.16; subtightplot(1,1,1,[],[0.2 0.04],[0.09 0.02]);
     if true
-        b=bar(categorical([1 2 3 4 6 12]), 100-[weightAcc([6:10 end]); aim3sAcc([6:10 end])]'); %barvalues(f,1,false);
-        c = [0.93,0.69,0.13;0.35,0.85,0.07];
+        b=bar((1:6)' + (-1:2:1).*halfSep, 100-[weightAcc([1:5 end]); aim3sAcc([1:5 end])]', 'BarWidth', 3.8); barvalues(f,1);
+        xticks(1:6); xticklabels([1 2 3 4 6 12]); m = 0.6; xlim([1-m, 6+m]);
+        c = [0.7,0.41,0.22; 0,0.44,0.71];
         for i=1:length(b), b(i).FaceColor = c(i,:); end
-        xlabel('Bin width (# plates/bin)'); ylabel('Avg. ID Error (%)');
-        legend(' Weight-based (P_{weight }) ', ' AIM3S (P_{fusion }) ', 'Position',[0.155,0.625,0.37,0.24]);
+        xlabel('Bin width (# plates/bin)'); ylabel('Avg. ID Error (%)'); set(gca, 'YGrid','on');
+        legend(' Weight-based (P_{weight }) ', ' AIM3S (P_{fusion }) ', 'Position',[0.11,0.67,0.36,0.24]);
     else
         b=bar(categorical([1 2 3 4 6 12]), diff([weightAcc([6:10 end]); aim3sAcc([6:10 end])])'); %barvalues(f,1,false);
         c = [0.93,0.69,0.13;0.35,0.85,0.07];

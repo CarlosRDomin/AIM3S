@@ -141,7 +141,7 @@ class ProductPredictionVisualizer(tk.Tk):
         self.is_multicam = is_multicam
         self.items_in_frame_manager = VisuallyPredictedItemsManager()
         self.products_info = sorted(parse_product_info(), key=lambda product_info: product_info.get("training_id", float("inf")))  # Load info about products: name, id, barcode, etc
-        self.products_names = [product_info.get("name", "Unkwown name!") for product_info in self.products_info]
+        self.products_names = [product_info.get("name", "Unkwown name!") for product_info in self.products_info if product_info.get("id", 34) <= 33]
 
         # Load video
         self.v = cv2.VideoCapture(self.video_filename)
