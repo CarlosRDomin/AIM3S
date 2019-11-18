@@ -119,6 +119,10 @@ if true
         legend(' AIM3S (P_{fusion }) ', 'Position',[0.155,0.625,0.37,0.24]);
     end
     saveFigure(f, 'errorVsBinWidth', FIG_FOLDER);
+    
+    hold on; plot([-1 13], [14 14], '--', 'Color',[0.76 0.05 0.05], 'LineWidth',1, 'DisplayName',' Self-Checkout');
+    xticklabels(12./[1 2 3 4 6 12]); xlabel('Weight sensor density (# bins/shelf)');
+    saveFigure(f, 'errorVsWeightDensity', FIG_FOLDER);
 end
 
 %% Plot 

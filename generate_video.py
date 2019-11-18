@@ -95,7 +95,7 @@ def generate_multicam_video(experiment_base_folder, video_out_filename=None, t_s
     return video_out_filename
 
 
-def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_tare=False, t_lims=3, t_start=0, t_end=-1, weight_plot_scale=0.3, video_fps=25, visualize=True, save_video=False, cb_event_start_or_end=None, out_scale=0.5):
+def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, t_lims=3, t_start=0, t_end=-1, weight_plot_scale=0.3, video_fps=25, visualize=True, save_video=False, cb_event_start_or_end=None, out_scale=0.5):
     multiple_cams = (camera_id < 0)
     if multiple_cams:
         weight_plot_scale = 1.0  # Overwrite setting, weight plots will be hstacked (same height)
@@ -164,7 +164,7 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
     is_paused = False
     refresh_weight = True
     do_skip_frames = False
-    while n < len(t_cam):
+    while n < len(t_cam)-1:
         if not is_paused or do_skip_frames:
             n += 1
             ok = video_in.read(rgb_data[:,:video_in_width,:])
@@ -256,10 +256,9 @@ def generate_video(experiment_base_folder, camera_id=3, weight_id=5309446, do_ta
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("folder", default="Dataset/Evaluation", help="Folder containing the experiment to visualize")
-    parser.add_argument('-c', "--cam", default=1, type=int, help="ID of the camera to visualize")
-    parser.add_argument('-w', "--weight", default=5309446, type=int, help="ID of the weight sensor to visualize")
-    parser.add_argument('-t', "--do-tare", default=True, type=str2bool, help="Whether or not to tare the weight scale")
-    parser.add_argument('-l', "--t-lims", default=3, type=float, help="Length (in s) of the weight plot sliding window")
+    parser.add_argument('-c', "--cam", default=-1, type=int, help="ID of the camera to visualize")
+    parser.add_argument('-w', "--weight", default=-1, type=int, help="ID of the weight sensor to visualize")
+    parser.add_argument('-l', "--t-lims", default=4, type=float, help="Length (in s) of the weight plot sliding window")
     parser.add_argument('-s', "--t-start", default=0, type=float, help="Experiment time at which to start generating the video")
     parser.add_argument('-e', "--t-end", default=-1, type=float, help="Experiment time at which to stop generating the video (-1 for no limit)")
     parser.add_argument('-k', "--scale", default=0.3, type=float, help="Ratio (0-1) to scale down the weight plot wrt the video's dimensions")
@@ -282,4 +281,4 @@ if __name__ == '__main__':
             if not task_state.successful():
                 print("Uh oh... Task {}: {}".format(i+1, task_state._value))
     else:
-        generate_video(args.folder, args.cam, args.weight, args.do_tare, args.t_lims, args.t_start, args.t_end, args.scale, args.fps)
+        generate_video(args.folder, args.cam, args.weight, args.t_lims, args.t_start, args.t_end, args.scale, args.fps, visualize=False, save_video=True, out_scale=1)
